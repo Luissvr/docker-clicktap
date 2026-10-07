@@ -1,6 +1,6 @@
 # ClickTap — Panel Administrativo Local (`docker-clicktap`)
 
-Este repositorio contiene la infraestructura Docker, backend y base de datos relacional para el **Panel Administrativo Local de ClickTap**, construido con **Laravel 11**, **Filament v3** y **PostgreSQL 16**.
+Este repositorio contiene la infraestructura Docker, backend y base de datos relacional para el **Panel Administrativo Local de ClickTap**, construido con **Laravel 13**, **Filament v3** y **PostgreSQL 16**.
 
 ---
 
@@ -9,7 +9,7 @@ Este repositorio contiene la infraestructura Docker, backend y base de datos rel
 El entorno corre localmente mediante Docker Compose con los siguientes servicios:
 
 * **`clicktap_web` (Nginx Alpine):** Servidor web expuesto únicamente en `http://127.0.0.1:8080`.
-* **`clicktap_app` (PHP 8.3-FPM Alpine):** Contenedor con Laravel 11, Filament v3, Composer y extensiones (`pdo_pgsql`, `gd`, `intl`, `zip`, `exif`, `bcmath`, `opcache`).
+* **`clicktap_app` (PHP 8.3-FPM Alpine):** Contenedor con Laravel 13, Filament v3, Composer y extensiones (`pdo_pgsql`, `gd`, `intl`, `zip`, `exif`, `bcmath`, `opcache`).
 * **`clicktap_db` (PostgreSQL 16 Alpine):** Base de datos relacional con volumen persistente (`clicktap_postgres_data`), expuesta localmente en `127.0.0.1:5432`.
 
 ---
