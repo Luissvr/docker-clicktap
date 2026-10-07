@@ -1,0 +1,60 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: .docker/php/Dockerfile
+    container_name: clicktap_app
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ./src:/var/www/html
+      - ./.docker/php/local.ini:/usr/local/etc/php/conf.d/local.ini:ro
+    networks:
+      - clicktap_network
+    environment:
+      DB_CONNECTION: pgsql
+      DB_HOST: clicktap_db
+      DB_PORT: 5432
+      DB_DATABASE: ${DB_DATABASE:-clicktap_db}
+      DB_USERNAME: ${DB_USERNAME:-clicktap_user}
+      DB_PASSWORD: ${DB_PASSWORD:-clicktap_secret}
+    depends_on:
+      - db
+
+  web:
+    image: nginx:alpine
+    container_name: clicktap_web
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:80"
+    volumes:
+      - ./src:/var/www/html
+      - ./.docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - clicktap_network
+    depends_on:
+      - app
+
+  db:
+    image: postgres:16-alpine
+    container_name: clicktap_db
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5432:5432"
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-clicktap_db}
+      POSTGRES_USER: ${DB_USERNAME:-clicktap_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-clicktap_secret}
+      TZ: America/Santiago
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - clicktap_network
+
+networks:
+  clicktap_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    name: clicktap_postgres_data

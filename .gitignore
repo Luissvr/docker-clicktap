@@ -1,0 +1,46 @@
+# Archivos de entorno sensibles
+.env
+.env.backup
+.env.production
+
+# Datos locales de Docker
+postgres_data/
+
+# Directorio de la aplicación Laravel (src)
+/src/.env
+/src/.env.backup
+/src/.env.production
+/src/vendor/
+/src/node_modules/
+/src/public/storage
+/src/public/hot
+/src/storage/*.key
+/src/storage/app/*
+!/src/storage/app/.gitignore
+!/src/storage/app/public/
+!/src/storage/app/public/.gitignore
+!/src/storage/app/private/
+!/src/storage/app/private/.gitkeep
+/src/storage/framework/cache/*
+!/src/storage/framework/cache/.gitignore
+/src/storage/framework/sessions/*
+!/src/storage/framework/sessions/.gitignore
+/src/storage/framework/testing/*
+!/src/storage/framework/testing/.gitignore
+/src/storage/framework/views/*
+!/src/storage/framework/views/.gitignore
+/src/storage/logs/*
+!/src/storage/logs/.gitignore
+/src/bootstrap/cache/*
+!/src/bootstrap/cache/.gitignore
+
+# Sistema y herramientas de desarrollo
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
