@@ -5,12 +5,15 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\PaginaResource\Pages;
 use App\Models\Pagina;
 use App\Support\LogoPalette;
+use App\Support\PublicPagePublisher;
 use Filament\Forms;
 use Filament\Forms\Form;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Support\Str;
+use Throwable;
 
 class PaginaResource extends Resource
 {
@@ -146,6 +149,21 @@ class PaginaResource extends Resource
                 Tables\Columns\TextColumn::make('slug')->label('Ruta')->copyable(),
                 Tables\Columns\TextColumn::make('enlaces_count')->counts('enlaces')->label('Enlaces'),
                 Tables\Columns\IconColumn::make('activo')->boolean(),
+                Tables\Columns\TextColumn::make('publicacion_estado')
+                    ->label('Publicación')
+                    ->badge()
+                    ->formatStateUsing(fn (?string $state): string => match ($state) {
+                        'enviada' => 'Enviada',
+                        'publicando' => 'Enviando',
+                        'fallida' => 'Fallida',
+                        default => 'Sin publicar',
+                    })
+                    ->color(fn (?string $state): string => match ($state) {
+                        'enviada' => 'success',
+                        'publicando' => 'warning',
+                        'fallida' => 'danger',
+                        default => 'gray',
+                    }),
                 Tables\Columns\TextColumn::make('updated_at')->label('Última edición')->since()->sortable(),
             ])
             ->actions([
@@ -159,6 +177,33 @@ class PaginaResource extends Resource
                     ->icon('heroicon-o-device-phone-mobile')
                     ->url(fn (Pagina $record): string => route('paginas.preview', ['pagina' => $record, 'device' => 'mobile']))
                     ->openUrlInNewTab(),
+                Tables\Actions\Action::make('publish')
+                    ->label('Publicar')
+                    ->icon('heroicon-o-cloud-arrow-up')
+                    ->color('success')
+                    ->requiresConfirmation()
+                    ->modalHeading('Publicar página')
+                    ->modalDescription('Se enviará el contenido activo de todas las páginas al repositorio conectado.')
+                    ->visible(fn (Pagina $record): bool => $record->activo)
+                    ->action(function (Pagina $record): void {
+                        try {
+                            $commit = app(PublicPagePublisher::class)->publish($record);
+
+                            Notification::make()
+                                ->title('Publicación enviada')
+                                ->body("Commit {$commit} enviado al repositorio.")
+                                ->success()
+                                ->send();
+                        } catch (Throwable $exception) {
+                            report($exception);
+
+                            Notification::make()
+                                ->title('No se pudo publicar')
+                                ->body($exception->getMessage())
+                                ->danger()
+                                ->send();
+                        }
+                    }),
                 Tables\Actions\EditAction::make(),
             ]);
     }

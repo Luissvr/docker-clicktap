@@ -32,6 +32,10 @@ class Pagina extends Model
         'color_texto_boton',
         'activo',
         'actualizada_por',
+        'publicacion_estado',
+        'publicacion_commit',
+        'publicacion_error',
+        'publicada_en',
     ];
 
     protected static function booted(): void
@@ -52,6 +56,7 @@ class Pagina extends Model
     {
         return [
             'activo' => 'boolean',
+            'publicada_en' => 'datetime',
         ];
     }
 

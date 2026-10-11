@@ -35,4 +35,11 @@ return [
         ],
     ],
 
+    'github' => [
+        'api_url' => env('GITHUB_API_URL', 'https://api.github.com'),
+        'token' => env('GITHUB_API_TOKEN'),
+        'repository' => env('GITHUB_REPOSITORY', 'bmartinezr1/linktree-a-lo-weillo'),
+        'branch' => env('GITHUB_PUBLICATION_BRANCH', 'main'),
+    ],
+
 ];

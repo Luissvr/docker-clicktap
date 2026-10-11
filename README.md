@@ -118,13 +118,25 @@ Con Docker, Node.js y el repositorio Astro disponible localmente, se puede prepa
 
 El script exporta las páginas activas, copia los logos usados y ejecuta las pruebas y el build de Astro. Deja los cambios listos para revisión, pero no hace commit, push ni elimina recursos existentes.
 
+### Publicar desde el panel
+
+La publicación del sitio se inicia manualmente desde el botón **Publicar** de una página activa. Guardar una página no la publica. Antes de usarlo, configura en `src/.env`:
+
+```dotenv
+GITHUB_API_TOKEN=tu_token_de_contenidos
+GITHUB_REPOSITORY=bmartinezr1/linktree-a-lo-weillo
+GITHUB_PUBLICATION_BRANCH=main
+```
+
+El token debe tener permisos de lectura y escritura de contenidos en el repositorio Astro. El panel registra si el commit fue enviado o falló; la propagación posterior de Cloudflare puede tardar.
+
 ## 7. Modelo de datos y seguridad
 
 * **Relaciones activas:** Cliente opcional → Local → Página → Enlace de página.
 * **UUIDs:** Las entidades utilizan identificadores UUID.
 * **Sin registro público:** solo usuarios activos creados previamente pueden acceder a Filament.
 * **Rutas estables:** el slug no cambia después de crear la página y no puede colisionar con rutas técnicas o alias históricos.
-* **Logos:** se guardan en el disco público de Laravel mediante `public/storage`. La futura publicación a Astro debe copiar únicamente los recursos públicos usados.
+* **Logos:** se guardan en el disco público de Laravel mediante `public/storage`. Al publicar se copian únicamente los logos usados a `public/generated/logos` del repositorio Astro; no se eliminan recursos existentes.
 
 
 ## 8. Pruebas
