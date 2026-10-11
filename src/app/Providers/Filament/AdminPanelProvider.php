@@ -28,6 +28,7 @@ class AdminPanelProvider extends PanelProvider
             ->path('admin')
             ->brandName('ClickTap Admin')
             ->login()
+            ->databaseTransactions()
             ->colors([
                 'primary' => Color::Amber,
             ])

@@ -11,6 +11,8 @@ El entorno corre localmente mediante Docker Compose con los siguientes servicios
 * **`clicktap_web` (Nginx Alpine):** Servidor web expuesto únicamente en `http://127.0.0.1:8080`.
 * **`clicktap_app` (PHP 8.3-FPM Alpine):** Contenedor con Laravel 13, Filament v3, Composer y extensiones (`pdo_pgsql`, `gd`, `intl`, `zip`, `exif`, `bcmath`, `opcache`).
 * **`clicktap_db` (PostgreSQL 16 Alpine):** Base de datos relacional con volumen persistente (`clicktap_postgres_data`), expuesta localmente en `127.0.0.1:5432`.
+* **`clicktap_vendor_data`:** Dependencias PHP dentro de Docker para evitar la latencia del montaje de Windows. Se completa automáticamente en el primer inicio.
+* **`clicktap_runtime_data`:** Vistas y cachés temporales de Laravel dentro de Docker; no contiene datos de negocio.
 
 ---
 
@@ -19,19 +21,22 @@ El entorno corre localmente mediante Docker Compose con los siguientes servicios
 * [Docker Desktop](https://www.docker.com/products/docker-desktop/) instalado y en ejecución en Windows/Mac/Linux.
 * Git.
 
+En Windows, mantener el repositorio fuera de OneDrive. La ruta local usada por este equipo es `C:\dev\docker-clicktap`.
+
 ---
 
 ## 3. Puesta en Marcha Rápida
 
 1. **Iniciar los contenedores:**
    ```powershell
+   cd C:\dev\docker-clicktap
    docker compose up -d
    ```
+   El primer inicio puede tardar mientras Docker prepara las dependencias; los siguientes reutilizan los volúmenes.
 
 2. **Acceder al panel de administración:**
    * URL: [http://localhost:8080/admin](http://localhost:8080/admin)
-   * **Usuario inicial:** `admin@clicktap.app`
-   * **Contraseña inicial:** `ClickTap2026!`
+   * Usar las credenciales administrativas configuradas localmente. Las contraseñas no se documentan en el repositorio.
 
 3. **Detener los contenedores:**
    ```powershell
@@ -49,6 +54,10 @@ El entorno corre localmente mediante Docker Compose con los siguientes servicios
 * **Ejecutar seeders:**
   ```powershell
   docker compose exec app php artisan db:seed
+  ```
+* **Actualizar dependencias PHP después de cambiar `composer.lock`:**
+  ```powershell
+  docker compose exec app composer install
   ```
 * **Abrir consola interactiva de Laravel (Tinker):**
   ```powershell
@@ -87,8 +96,49 @@ Restaura el esquema completo y los datos en PostgreSQL:
 
 ---
 
-## 6. Modelo de Datos y Seguridad
+## 6. Uso del panel
 
-* **UUIDs:** Todas las 16 entidades de negocio y auditoría emplean identificadores UUID para garantizar unicidad y evitar colisiones de IDs secuenciales.
-* **Sin Registro Público:** La auto-inscripción está deshabilitada en Filament; solo los usuarios administradores autorizados en la base de datos pueden acceder.
-* **Archivos Protegidos:** Los logos originales y archivos no publicados se gestionan en disco privado local (`src/storage/app/private`) y nunca se exponen directamente al servidor web público.
+El flujo inicial recomendado es:
+
+1. Crear una **Página** con el nombre público del local.
+2. El sistema crea automáticamente el **Local**.
+3. Asociar un **Cliente** solo si ya corresponde; es opcional.
+4. Completar descripción, contacto, logo, colores y enlaces.
+5. Guardar y abrir **Vista previa** desde la lista de páginas.
+
+La página guarda directamente el contenido vigente. Los enlaces pertenecen a la página, pueden ordenarse o desactivarse y pueden guardarse sin destino mientras se completan. Existe un tipo de enlace para **Datos de transferencia** y cualquier enlace puede configurarse para copiar un texto al pulsarlo. Al cargar un logo, el panel propone una paleta de colores editable. No se utilizan borradores, aprobaciones ni historial de versiones en el MVP simplificado.
+
+## 7. Modelo de datos y seguridad
+
+* **Relaciones activas:** Cliente opcional → Local → Página → Enlace de página.
+* **UUIDs:** Las entidades utilizan identificadores UUID.
+* **Sin registro público:** solo usuarios activos creados previamente pueden acceder a Filament.
+* **Rutas estables:** el slug no cambia después de crear la página y no puede colisionar con rutas técnicas o alias históricos.
+* **Logos:** se guardan en el disco público de Laravel mediante `public/storage`. La futura publicación a Astro debe copiar únicamente los recursos públicos usados.
+
+
+## 8. Pruebas
+
+La suite normal usa SQLite en memoria y no puede conectarse a la base personal:
+
+```powershell
+docker compose exec app php artisan test --compact
+```
+
+Las restricciones específicas de PostgreSQL se comprueban en `clicktap_test`:
+
+```powershell
+docker compose exec app vendor/bin/phpunit --configuration phpunit.postgres.xml
+```
+
+El entorno de pruebas fija internamente el nombre `clicktap_test` y aborta antes de ejecutar migraciones si una conexión PostgreSQL intenta usar otro nombre. La base de pruebas se crea una vez con:
+
+```powershell
+docker compose exec db sh -lc 'createdb --username="$POSTGRES_USER" clicktap_test'
+```
+
+## 9. Solución de problemas
+
+* Si el formulario de acceso muestra que `POST admin/login` no está permitido, recargar con `Ctrl+F5`. Ese mensaje aparece cuando el formulario quedó abierto durante un reinicio y el JavaScript de Livewire no cargó.
+* Comprobar los servicios con `docker compose ps`. Los tres deben aparecer como `Up`.
+* Comprobar Livewire abriendo `http://127.0.0.1:8080/livewire/livewire.js`; debe responder JavaScript.
