@@ -108,6 +108,16 @@ El flujo inicial recomendado es:
 
 La página guarda directamente el contenido vigente. Los enlaces pertenecen a la página, pueden ordenarse o desactivarse y pueden guardarse sin destino mientras se completan. Existe un tipo de enlace para **Datos de transferencia** y cualquier enlace puede configurarse para copiar un texto al pulsarlo. Al cargar un logo, el panel propone una paleta de colores editable. No se utilizan borradores, aprobaciones ni historial de versiones en el MVP simplificado.
 
+### Preparar una publicación pública
+
+Con Docker, Node.js y el repositorio Astro disponible localmente, se puede preparar el contenido y comprobar el build con:
+
+```powershell
+.\scripts\prepare-publish.ps1 -AstroPath "C:\dev\proyecto"
+```
+
+El script exporta las páginas activas, copia los logos usados y ejecuta las pruebas y el build de Astro. Deja los cambios listos para revisión, pero no hace commit, push ni elimina recursos existentes.
+
 ## 7. Modelo de datos y seguridad
 
 * **Relaciones activas:** Cliente opcional → Local → Página → Enlace de página.
