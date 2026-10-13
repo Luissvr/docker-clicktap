@@ -47,6 +47,26 @@ El repositorio puede permanecer en una carpeta de Windows. Composer y la caché 
 
 ## 4. Comandos de Mantenimiento
 
+### Entorno compartido con Supabase y copia local
+
+Con las credenciales de Supabase configuradas en `src/.env`, usa ambos archivos de Compose:
+
+```powershell
+docker compose -f docker-compose.yml -f docker-compose.supabase.yml up -d
+```
+
+Esto activa las lecturas locales de contenido y el servicio `sync-worker`: sincroniza al iniciar, cada 20 minutos y al pulsar **Sincronizar ahora** en el panel. Las escrituras se confirman en Supabase antes de actualizar la copia local. El acceso de usuarios sigue validándose contra Supabase.
+
+La copia se guarda en el esquema `clicktap_cache` del PostgreSQL local. La crea el sincronizador; no ejecutes las migraciones del panel sobre la conexión `local`. Si una sincronización falla, se conserva la última copia completa. Los listados se actualizan tras una sincronización manual; los formularios abiertos conservan sus cambios.
+
+Para detener este entorno, utiliza los mismos dos archivos con `down`. Para sincronizar desde terminal:
+
+```powershell
+docker exec -u www-data clicktap_app php artisan clicktap:sync-local
+```
+
+### Comandos generales
+
 * **Ejecutar migraciones:**
   ```powershell
   docker compose exec app php artisan migrate

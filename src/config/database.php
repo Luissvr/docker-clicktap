@@ -32,6 +32,34 @@ return [
 
     'connections' => [
 
+        // La conexión compartida conserva las credenciales actuales del panel.
+        'supabase' => [
+            'driver' => 'pgsql',
+            'url' => env('DB_URL'),
+            'host' => env('DB_HOST'),
+            'port' => env('DB_PORT', '5432'),
+            'database' => env('DB_DATABASE'),
+            'username' => env('DB_USERNAME'),
+            'password' => env('DB_PASSWORD'),
+            'charset' => 'utf8',
+            'prefix' => '',
+            'search_path' => env('DB_SCHEMA', 'clicktap'),
+            'sslmode' => env('DB_SSLMODE', 'require'),
+        ],
+
+        'local' => [
+            'driver' => 'pgsql',
+            'host' => env('LOCAL_DB_HOST', 'clicktap_db'),
+            'port' => env('LOCAL_DB_PORT', '5432'),
+            'database' => env('LOCAL_DB_DATABASE', 'clicktap_db'),
+            'username' => env('LOCAL_DB_USERNAME', 'clicktap_user'),
+            'password' => env('LOCAL_DB_PASSWORD', 'clicktap_secret'),
+            'charset' => 'utf8',
+            'prefix' => '',
+            'search_path' => 'clicktap_cache',
+            'sslmode' => 'disable',
+        ],
+
         'sqlite' => [
             'driver' => 'sqlite',
             'url' => env('DB_URL'),

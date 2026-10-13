@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use App\Support\PageRoute;
+use App\Support\TracksCatalogChanges;
+use App\Support\UsesCatalogConnection;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -12,7 +14,8 @@ use LogicException;
 
 class Pagina extends Model
 {
-    use \App\Support\TracksCatalogChanges, HasFactory, HasUuids;
+    use HasFactory, HasUuids, TracksCatalogChanges;
+    use UsesCatalogConnection;
 
     protected $table = 'paginas';
 

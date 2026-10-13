@@ -2,7 +2,10 @@
 
 namespace App\Providers;
 
+use App\Support\CatalogConnection;
+use App\Support\CatalogModelSynth;
 use Illuminate\Support\ServiceProvider;
+use Livewire\Livewire;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -19,6 +22,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        if (CatalogConnection::enabled()) {
+            CatalogConnection::configure();
+        }
+        Livewire::propertySynthesizer(CatalogModelSynth::class);
     }
 }

@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Support\TracksCatalogChanges;
+use App\Support\UsesCatalogConnection;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -10,7 +12,8 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class LocalNegocio extends Model
 {
-    use \App\Support\TracksCatalogChanges, HasFactory, HasUuids;
+    use HasFactory, HasUuids, TracksCatalogChanges;
+    use UsesCatalogConnection;
 
     protected $table = 'locales';
 

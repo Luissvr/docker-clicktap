@@ -3,8 +3,8 @@
 namespace App\Console\Commands;
 
 use App\Models\Pagina;
+use App\Support\CatalogConnection;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 use Throwable;
@@ -50,7 +50,7 @@ class MigrateLogosToSupabase extends Command
                 if (hash('sha256', $target->get($source)) !== hash('sha256', $contents)) {
                     throw new RuntimeException('La copia no coincide con el original.');
                 }
-                DB::transaction(function () use ($page, $source): void {
+                CatalogConnection::transaction(function () use ($page, $source): void {
                     $locked = Pagina::whereKey($page->id)->lockForUpdate()->firstOrFail();
                     if ($locked->logo_disk !== 'public' || $locked->logo_path !== $source || (int) $locked->revision !== (int) $page->revision) {
                         throw new RuntimeException('La página cambió durante la copia; reintenta tras revisarla.');

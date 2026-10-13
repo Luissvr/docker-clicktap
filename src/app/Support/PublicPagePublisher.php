@@ -15,6 +15,15 @@ final class PublicPagePublisher
 
     public function publish(Pagina $pagina): string
     {
+        try {
+            return CatalogConnection::remoteReads(fn (): string => $this->publishFromRemote($pagina->fresh()));
+        } finally {
+            CatalogConnection::refreshAfterWrite();
+        }
+    }
+
+    private function publishFromRemote(Pagina $pagina): string
+    {
         $pagina->forceFill([
             'publicacion_estado' => 'publicando',
             'publicacion_error' => null,

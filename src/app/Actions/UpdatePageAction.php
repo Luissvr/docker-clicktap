@@ -4,8 +4,8 @@ namespace App\Actions;
 
 use App\Models\Pagina;
 use App\Models\User;
+use App\Support\CatalogConnection;
 use Illuminate\Support\Arr;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
@@ -37,7 +37,7 @@ class UpdatePageAction
             'enlaces' => $links,
         ], $pageRules)->validate();
 
-        return DB::transaction(function () use ($actor, $pagina, $validated): Pagina {
+        return CatalogConnection::transaction(function () use ($actor, $pagina, $validated): Pagina {
             $expectedRevision = (int) $pagina->revision;
             $pagina = Pagina::query()->whereKey($pagina->getKey())->lockForUpdate()->firstOrFail();
             Gate::forUser($actor)->authorize('update', $pagina);

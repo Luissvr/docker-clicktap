@@ -4,11 +4,19 @@ namespace App\Filament\Resources\PaginaResource\Pages;
 
 use App\Filament\Resources\PaginaResource;
 use App\Models\LocalNegocio;
+use App\Support\UsesCatalogTransactions;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Database\Eloquent\Model;
 
 class CreatePagina extends CreateRecord
 {
+    use UsesCatalogTransactions;
+
+    public function create(bool $another = false): void
+    {
+        $this->performCatalogOperation(fn () => parent::create($another));
+    }
+
     protected static string $resource = PaginaResource::class;
 
     protected function mutateFormDataBeforeCreate(array $data): array
