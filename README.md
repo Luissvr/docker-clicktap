@@ -21,7 +21,7 @@ El entorno corre localmente mediante Docker Compose con los siguientes servicios
 * [Docker Desktop](https://www.docker.com/products/docker-desktop/) instalado y en ejecución en Windows/Mac/Linux.
 * Git.
 
-En Windows, mantener el repositorio fuera de OneDrive. La ruta local usada por este equipo es `C:\dev\docker-clicktap`.
+El repositorio puede permanecer en una carpeta de Windows. Composer y la caché de Laravel se guardan en volúmenes de Docker para evitar leer miles de archivos por el montaje de Windows en cada petición.
 
 ---
 
@@ -29,10 +29,10 @@ En Windows, mantener el repositorio fuera de OneDrive. La ruta local usada por e
 
 1. **Iniciar los contenedores:**
    ```powershell
-   cd C:\dev\docker-clicktap
+   cd "C:\ruta\docker-clicktap"
    docker compose up -d
    ```
-   El primer inicio puede tardar mientras Docker prepara las dependencias; los siguientes reutilizan los volúmenes.
+   El primer inicio puede tardar mientras Docker prepara las dependencias; los siguientes reutilizan los volúmenes. Ejecuta `docker compose up -d` también después de traer cambios en `docker-compose.yml`: Compose recreará los contenedores necesarios. Abrir Docker Desktop por sí solo no aplica la configuración nueva.
 
 2. **Acceder al panel de administración:**
    * URL: [http://localhost:8080/admin](http://localhost:8080/admin)
@@ -46,6 +46,26 @@ En Windows, mantener el repositorio fuera de OneDrive. La ruta local usada por e
 ---
 
 ## 4. Comandos de Mantenimiento
+
+### Entorno compartido con Supabase y copia local
+
+Con las credenciales de Supabase configuradas en `src/.env`, usa ambos archivos de Compose:
+
+```powershell
+docker compose -f docker-compose.yml -f docker-compose.supabase.yml up -d
+```
+
+Esto activa las lecturas locales de contenido y el servicio `sync-worker`: sincroniza al iniciar, cada 20 minutos y al pulsar **Sincronizar ahora** en el panel. Las escrituras se confirman en Supabase antes de actualizar la copia local. El acceso de usuarios sigue validándose contra Supabase.
+
+La copia se guarda en el esquema `clicktap_cache` del PostgreSQL local. La crea el sincronizador; no ejecutes las migraciones del panel sobre la conexión `local`. Si una sincronización falla, se conserva la última copia completa. Los listados se actualizan tras una sincronización manual; los formularios abiertos conservan sus cambios.
+
+Para detener este entorno, utiliza los mismos dos archivos con `down`. Para sincronizar desde terminal:
+
+```powershell
+docker exec -u www-data clicktap_app php artisan clicktap:sync-local
+```
+
+### Comandos generales
 
 * **Ejecutar migraciones:**
   ```powershell

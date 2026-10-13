@@ -14,6 +14,11 @@ class User extends Authenticatable implements FilamentUser
 {
     use HasFactory, HasUuids, Notifiable;
 
+    public function getConnectionName(): ?string
+    {
+        return $this->connection === 'catalog' ? config('database.default') : parent::getConnectionName();
+    }
+
     protected $attributes = [
         'activo' => true,
     ];

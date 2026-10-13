@@ -3,14 +3,23 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "build": "vite build",
-        "dev": "vite"
+        "build": "vite build && npm run build:admin",
+        "build:admin": "node resources/js/build-admin.mjs && node node_modules/tailwindcss3/lib/cli.js --input resources/css/filament/admin/theme.css --output public/build/admin/theme.css --config resources/css/filament/admin/tailwind.config.js --minify",
+        "dev": "vite",
+        "dev:admin": "node resources/js/build-admin.mjs && node node_modules/tailwindcss3/lib/cli.js --input resources/css/filament/admin/theme.css --output public/build/admin/theme.css --config resources/css/filament/admin/tailwind.config.js --watch",
+        "test:ui": "playwright test"
     },
     "devDependencies": {
+        "@fontsource-variable/inter": "5.2.8",
+        "@playwright/test": "1.56.1",
+        "@tailwindcss/forms": "0.5.10",
+        "@tailwindcss/typography": "0.5.19",
         "@tailwindcss/vite": "^4.0.0",
         "concurrently": "^10.0.3",
         "laravel-vite-plugin": "^3.1",
+        "lucide-static": "0.468.0",
         "tailwindcss": "^4.0.0",
+        "tailwindcss3": "npm:tailwindcss@3.4.19",
         "vite": "^8.0.0"
     },
     "optionalDependencies": {

@@ -60,7 +60,8 @@ class PaginaResource extends Resource
                     Forms\Components\FileUpload::make('logo_path')
                         ->label('Logo o imagen principal')
                         ->image()
-                        ->disk('public')
+                        ->disk(fn (?Pagina $record): string => $record?->logo_disk ?? config('clicktap.media_disk', 'public'))
+                        ->visibility(fn (?Pagina $record): string => ($record?->logo_disk ?? config('clicktap.media_disk', 'public')) === 'public' ? 'public' : 'private')
                         ->directory('logos')
                         ->imageEditor()
                         ->live()
@@ -156,12 +157,14 @@ class PaginaResource extends Resource
                         'enviada' => 'Enviada',
                         'publicando' => 'Enviando',
                         'fallida' => 'Fallida',
+                        'legado' => 'Activa en el sitio actual',
                         default => 'Sin publicar',
                     })
                     ->color(fn (?string $state): string => match ($state) {
                         'enviada' => 'success',
                         'publicando' => 'warning',
                         'fallida' => 'danger',
+                        'legado' => 'info',
                         default => 'gray',
                     }),
                 Tables\Columns\TextColumn::make('updated_at')->label('Última edición')->since()->sortable(),

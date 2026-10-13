@@ -15,14 +15,17 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         // Administrador inicial del panel ClickTap
-        User::firstOrCreate(
-            ['email' => 'admin@clicktap.app'],
-            [
-                'name' => 'Administrador ClickTap',
-                'password' => Hash::make('ClickTap2026!'),
-                'activo' => true,
-            ]
-        );
+        if (app()->environment('testing') || (app()->environment('local') && config('database.connections.pgsql.search_path') === 'public' && config('database.connections.pgsql.host') === 'clicktap_db')) {
+            User::firstOrCreate(
+                ['email' => 'admin@clicktap.app'],
+                [
+                    'name' => 'Administrador ClickTap',
+                    'password' => Hash::make('ClickTap2026!'),
+                    'activo' => true,
+                ]
+            );
+
+        }
 
         // Configuración de precios sugeridos
         DB::table('configuracion_precios')->insertOrIgnore([

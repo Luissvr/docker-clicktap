@@ -1,0 +1,53 @@
+# docker compose -f docker-compose.yml -f docker-compose.supabase.yml up -d
+# Requiere Docker Compose 2.24.4+ (soporte !reset y !override).
+services:
+  app:
+    environment: !override
+      CLICKTAP_LOCAL_CATALOG: "true"
+      LOCAL_DB_HOST: clicktap_db
+      LOCAL_DB_DATABASE: ${DB_DATABASE:-clicktap_db}
+      LOCAL_DB_USERNAME: ${DB_USERNAME:-clicktap_user}
+      LOCAL_DB_PASSWORD: ${DB_PASSWORD:-clicktap_secret}
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "php", "-r", "exit(@fsockopen('127.0.0.1', 9000) ? 0 : 1);"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
+  db:
+    profiles: !reset []
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+  sync-worker:
+    build:
+      context: .
+      dockerfile: .docker/php/Dockerfile
+    container_name: clicktap_sync_worker
+    restart: unless-stopped
+    user: www-data
+    working_dir: /var/www/html
+    command: sh -c "until [ -f vendor/autoload.php ]; do sleep 2; done; php artisan clicktap:sync-worker"
+    volumes:
+      - ./src:/var/www/html
+      - vendor_data:/var/www/html/vendor
+      - runtime_data:/var/www/html/storage/framework
+      - ./.docker/php/local.ini:/usr/local/etc/php/conf.d/local.ini:ro
+    networks:
+      - clicktap_network
+    environment:
+      CLICKTAP_LOCAL_CATALOG: "true"
+      LOCAL_DB_HOST: clicktap_db
+      LOCAL_DB_DATABASE: ${DB_DATABASE:-clicktap_db}
+      LOCAL_DB_USERNAME: ${DB_USERNAME:-clicktap_user}
+      LOCAL_DB_PASSWORD: ${DB_PASSWORD:-clicktap_secret}
+    depends_on:
+      app:
+        condition: service_healthy
+      db:
+        condition: service_healthy

@@ -9,4 +9,4 @@ Route::get('/', function () {
 
 Route::get('/preview/{pagina:slug}', function (Pagina $pagina) {
     return view('paginas.preview', ['pagina' => $pagina->load('enlaces')]);
-})->middleware('auth')->name('paginas.preview');
+})->middleware(['auth', 'can:view,pagina'])->name('paginas.preview');

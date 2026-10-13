@@ -13,7 +13,8 @@ final class PublicPageExporter
         return [
             'version' => 1,
             'pages' => Pagina::query()
-                ->with('enlaces')
+                ->useWritePdo()
+                ->with(['enlaces' => fn ($query) => $query->useWritePdo()])
                 ->where('activo', true)
                 ->orderBy('slug')
                 ->get()

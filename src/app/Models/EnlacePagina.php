@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\UsesCatalogConnection;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -10,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class EnlacePagina extends Model
 {
     use HasFactory, HasUuids;
+    use UsesCatalogConnection;
 
     protected $table = 'enlaces_pagina';
 

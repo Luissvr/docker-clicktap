@@ -54,7 +54,9 @@
         @php
             $logoUrl = str_starts_with($pagina->logo_path, 'http')
                 ? $pagina->logo_path
-                : '/storage/'.ltrim($pagina->logo_path, '/');
+                : ($pagina->logo_disk === 'public'
+                    ? '/storage/'.ltrim($pagina->logo_path, '/')
+                    : \Illuminate\Support\Facades\Storage::disk($pagina->logo_disk)->temporaryUrl($pagina->logo_path, now()->addMinutes(5)));
         @endphp
         <img src="{{ $logoUrl }}" alt="Logo de {{ $pagina->nombre_publico }}">
     @endif

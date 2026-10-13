@@ -15,6 +15,9 @@ abstract class TestCase extends BaseTestCase
         $this->setEnvironment('DB_CONNECTION', $usesPostgres ? 'pgsql' : 'sqlite');
         $this->setEnvironment('DB_DATABASE', $usesPostgres ? 'clicktap_test' : ':memory:');
         $this->setEnvironment('DB_URL', '');
+        $this->setEnvironment('CLICKTAP_LOCAL_CATALOG', 'false');
+        $this->setEnvironment('CLICKTAP_SYNC_CACHE_STORE', 'array');
+        $this->setEnvironment('CLICKTAP_MEDIA_DISK', 'public');
 
         $app = parent::createApplication();
         $connection = $app['config']->get('database.default');

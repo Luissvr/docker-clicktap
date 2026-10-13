@@ -6,9 +6,9 @@ use App\Models\Cliente;
 use App\Models\LocalNegocio;
 use App\Models\Pagina;
 use App\Models\User;
+use App\Support\CatalogConnection;
 use App\Support\PageRoute;
 use Illuminate\Support\Arr;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Validator;
 
@@ -51,7 +51,7 @@ class CreatePageAction
             'enlaces' => $links,
         ], $rules)->validate();
 
-        return DB::transaction(function () use ($actor, $validated, $slug): Pagina {
+        return CatalogConnection::transaction(function () use ($actor, $validated, $slug): Pagina {
             $clienteData = $validated['cliente'] ?? [];
             $cliente = isset($clienteData['nombre'])
                 ? Cliente::query()->create(Arr::only($clienteData, [
