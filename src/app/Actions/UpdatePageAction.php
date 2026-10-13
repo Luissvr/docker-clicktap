@@ -8,6 +8,7 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
 
 class UpdatePageAction
 {
@@ -37,8 +38,14 @@ class UpdatePageAction
         ], $pageRules)->validate();
 
         return DB::transaction(function () use ($actor, $pagina, $validated): Pagina {
+            $expectedRevision = (int) $pagina->revision;
             $pagina = Pagina::query()->whereKey($pagina->getKey())->lockForUpdate()->firstOrFail();
             Gate::forUser($actor)->authorize('update', $pagina);
+            if ((int) $pagina->revision !== $expectedRevision) {
+                throw ValidationException::withMessages(['pagina' => 'Otro socio modificó esta página. Recarga antes de guardar.']);
+            }
+            $pagina->revision = $expectedRevision + 1;
+            $pagina->modificado_por = $actor->id;
 
             $pagina->fill(Arr::only($validated['pagina'], CreatePageAction::pageFields()));
             $pagina->actualizada_por = $actor->getKey();

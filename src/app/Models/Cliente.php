@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Cliente extends Model
 {
-    use HasFactory, HasUuids;
+    use \App\Support\TracksCatalogChanges, HasFactory, HasUuids;
 
     protected $table = 'clientes';
 

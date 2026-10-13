@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class LocalNegocio extends Model
 {
-    use HasFactory, HasUuids;
+    use \App\Support\TracksCatalogChanges, HasFactory, HasUuids;
 
     protected $table = 'locales';
 

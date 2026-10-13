@@ -12,7 +12,7 @@ use LogicException;
 
 class Pagina extends Model
 {
-    use HasFactory, HasUuids;
+    use \App\Support\TracksCatalogChanges, HasFactory, HasUuids;
 
     protected $table = 'paginas';
 
@@ -31,6 +31,7 @@ class Pagina extends Model
         'color_boton',
         'color_texto_boton',
         'activo',
+        'contenido_extra',
         'actualizada_por',
         'publicacion_estado',
         'publicacion_commit',
@@ -41,6 +42,7 @@ class Pagina extends Model
     protected static function booted(): void
     {
         static::creating(function (Pagina $pagina): void {
+            $pagina->logo_disk ??= config('clicktap.media_disk', 'public');
             $pagina->slug = PageRoute::clean($pagina->slug);
             PageRoute::assertAvailable($pagina->slug);
         });
@@ -57,6 +59,7 @@ class Pagina extends Model
         return [
             'activo' => 'boolean',
             'publicada_en' => 'datetime',
+            'contenido_extra' => 'array',
         ];
     }
 

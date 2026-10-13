@@ -1,0 +1,8 @@
+:root {
+    color-scheme: light;
+    --ct-bg: #f6f7f5;
+    --ct-ink: #101010;
+    --ct-accent: #b6ff00;
+    --ct-focus: #375500;
+    --ct-font: Inter, system-ui, sans-serif;
+}

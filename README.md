@@ -21,7 +21,7 @@ El entorno corre localmente mediante Docker Compose con los siguientes servicios
 * [Docker Desktop](https://www.docker.com/products/docker-desktop/) instalado y en ejecución en Windows/Mac/Linux.
 * Git.
 
-En Windows, mantener el repositorio fuera de OneDrive. La ruta local usada por este equipo es `C:\dev\docker-clicktap`.
+El repositorio puede permanecer en una carpeta de Windows. Composer y la caché de Laravel se guardan en volúmenes de Docker para evitar leer miles de archivos por el montaje de Windows en cada petición.
 
 ---
 
@@ -29,10 +29,10 @@ En Windows, mantener el repositorio fuera de OneDrive. La ruta local usada por e
 
 1. **Iniciar los contenedores:**
    ```powershell
-   cd C:\dev\docker-clicktap
+   cd "C:\ruta\docker-clicktap"
    docker compose up -d
    ```
-   El primer inicio puede tardar mientras Docker prepara las dependencias; los siguientes reutilizan los volúmenes.
+   El primer inicio puede tardar mientras Docker prepara las dependencias; los siguientes reutilizan los volúmenes. Ejecuta `docker compose up -d` también después de traer cambios en `docker-compose.yml`: Compose recreará los contenedores necesarios. Abrir Docker Desktop por sí solo no aplica la configuración nueva.
 
 2. **Acceder al panel de administración:**
    * URL: [http://localhost:8080/admin](http://localhost:8080/admin)

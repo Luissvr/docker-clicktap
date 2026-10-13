@@ -1,0 +1,26 @@
+@import '../../../../vendor/filament/filament/resources/css/base.css';
+@import './tokens.css';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@tailwind variants;
+
+.fi-body {
+    background: var(--ct-bg);
+    color: var(--ct-ink);
+    font-family: var(--ct-font);
+}
+
+.fi-body .fi-btn.fi-color-primary {
+    background: var(--ct-accent);
+    color: var(--ct-ink);
+}
+
+.fi-body .fi-btn.fi-color-primary:hover {
+    filter: brightness(.96);
+}
+
+.fi-body :is(a, button, input, select, textarea):focus-visible {
+    outline: 3px solid var(--ct-focus);
+    outline-offset: 3px;
+}

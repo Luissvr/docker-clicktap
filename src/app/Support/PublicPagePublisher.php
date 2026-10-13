@@ -11,9 +11,7 @@ use RuntimeException;
 
 final class PublicPagePublisher
 {
-    public function __construct(private readonly PublicPageExporter $exporter)
-    {
-    }
+    public function __construct(private readonly PublicPageExporter $exporter) {}
 
     public function publish(Pagina $pagina): string
     {
@@ -99,7 +97,8 @@ final class PublicPagePublisher
             }
 
             $source = ltrim(Str::after($logo, '/storage/'), '/');
-            if (! Storage::disk('public')->exists($source)) {
+            $disk = Storage::disk(Pagina::where('slug', $page['slug'])->firstOrFail()->logo_disk);
+            if (! $disk->exists($source)) {
                 throw new RuntimeException("No se encontró el logo público: {$source}.");
             }
 
@@ -109,7 +108,7 @@ final class PublicPagePublisher
             }
 
             $path = 'public/generated/logos/'.$page['slug'].'.'.$extension;
-            $logos[] = ['path' => $path, 'contents' => Storage::disk('public')->get($source)];
+            $logos[] = ['path' => $path, 'contents' => $disk->get($source)];
             $publicLogo = '/generated/logos/'.$page['slug'].'.'.$extension;
             $page['logo'] = $publicLogo;
             if (is_string($page['favicon'] ?? null) && str_starts_with($page['favicon'], '/storage/')) {

@@ -6,7 +6,7 @@ services:
     container_name: clicktap_app
     restart: unless-stopped
     working_dir: /var/www/html
-    command: sh -c "mkdir -p storage/framework/cache/data storage/framework/sessions storage/framework/testing storage/framework/views && chown -R www-data:www-data storage/framework && if [ ! -f vendor/autoload.php ]; then composer install --no-interaction --prefer-dist; fi && php-fpm"
+    command: sh -c "mkdir -p storage/framework/cache/data storage/framework/sessions storage/framework/testing storage/framework/views storage/logs && chown -R www-data:www-data storage/framework storage/logs && if [ ! -f vendor/autoload.php ]; then composer install --no-interaction --prefer-dist; fi && php-fpm"
     volumes:
       - ./src:/var/www/html
       - vendor_data:/var/www/html/vendor

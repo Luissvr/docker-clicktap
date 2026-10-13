@@ -1,0 +1,8 @@
+# docker compose -f docker-compose.yml -f docker-compose.supabase.yml up -d app web
+# Requiere Docker Compose con soporte !reset.
+services:
+  app:
+    environment: !reset {}
+    depends_on: !reset []
+  db:
+    profiles: ["local-database"]
