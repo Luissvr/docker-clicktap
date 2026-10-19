@@ -4,6 +4,8 @@ use App\Models\User;
 
 return [
 
+    'database_connection' => env('AUTH_DB_CONNECTION', env('DB_CONNECTION', 'sqlite')),
+
     /*
     |--------------------------------------------------------------------------
     | Authentication Defaults
