@@ -7,6 +7,7 @@ use App\Exceptions\InvalidPageRouteException;
 use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
 class CreatePageActionTest extends TestCase
@@ -59,6 +60,36 @@ class CreatePageActionTest extends TestCase
         $this->assertDatabaseCount('clientes', 0);
         $this->assertDatabaseCount('locales', 1);
         $this->assertDatabaseCount('paginas', 1);
+    }
+
+    public function test_description_accepts_150_words_and_rejects_151(): void
+    {
+        $actor = User::factory()->create();
+        $description = implode(' ', array_fill(0, 150, 'atención'));
+
+        $page = app(CreatePageAction::class)->handle(
+            $actor,
+            [],
+            ['nombre_interno' => 'Local Demo'],
+            'descripcion-150',
+            ['nombre_publico' => 'Local Demo', 'descripcion' => $description],
+        );
+
+        $this->assertSame($description, $page->descripcion);
+
+        try {
+            app(CreatePageAction::class)->handle(
+                $actor,
+                [],
+                ['nombre_interno' => 'Segundo local'],
+                'descripcion-151',
+                ['nombre_publico' => 'Segundo local', 'descripcion' => $description.' adicional'],
+            );
+            $this->fail('Se aceptó una descripción de 151 palabras.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('pagina.descripcion', $exception->errors());
+            $this->assertDatabaseCount('paginas', 1);
+        }
     }
 
     public function test_creates_a_transfer_link_without_a_destination(): void

@@ -18,6 +18,7 @@ class PublicPageExportTest extends TestCase
             'nombre_publico' => 'Local público',
             'direccion_publica' => 'Una dirección',
             'telefono_publico' => '+56911111111',
+            'correo_publico' => 'hola@ejemplo.cl',
             'activo' => true,
         ]);
         $active->enlaces()->create([
@@ -37,6 +38,11 @@ class PublicPageExportTest extends TestCase
         $this->assertSame(1, $payload['version']);
         $this->assertCount(1, $payload['pages']);
         $this->assertSame('pagina-publica', $payload['pages'][0]['slug']);
+        $this->assertSame('Ubicación', $payload['pages'][0]['highlights'][0]['label']);
+        $this->assertSame('Contacto', $payload['pages'][0]['highlights'][1]['label']);
+        $this->assertSame("+56911111111\nhola@ejemplo.cl", $payload['pages'][0]['highlights'][1]['value']);
+        $this->assertSame('+56911111111', $payload['pages'][0]['highlights'][1]['phone']);
+        $this->assertSame('hola@ejemplo.cl', $payload['pages'][0]['highlights'][1]['email']);
         $this->assertSame('Copiar datos de transferencia', $payload['pages'][0]['links'][0]['label']);
         $this->assertSame('Banco Demo, cuenta 123', $payload['pages'][0]['links'][0]['copyText']);
         $this->assertArrayNotHasKey('actualizada_por', $payload['pages'][0]);

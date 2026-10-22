@@ -2,7 +2,16 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Pages\Cobros;
+use App\Filament\Pages\ConfiguracionPrecios;
+use App\Filament\Pages\Contabilidad;
 use App\Filament\Pages\Dashboard;
+use App\Filament\Pages\PlacasNfc;
+use App\Filament\Pages\PublicacionesSitio;
+use App\Filament\Pages\SolicitudesCambio;
+use App\Filament\Pages\StockTarjetas;
+use App\Filament\Resources\ClienteResource\Pages\ListClientes;
+use App\Filament\Resources\PaginaResource\Pages\ListPaginas;
 use App\Support\CatalogConnection;
 use Filament\Enums\ThemeMode;
 use Filament\FontProviders\LocalFontProvider;
@@ -12,6 +21,8 @@ use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use Filament\Panel;
 use Filament\PanelProvider;
+use Filament\Tables\View\TablesRenderHook;
+use Filament\View\PanelsRenderHook;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
@@ -29,6 +40,8 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->brandName('ClickTap')
+            ->brandLogo(asset('images/clicktap-horizontal.png'))
+            ->brandLogoHeight('34px')
             ->login()
             ->spa()
             ->databaseTransactions()
@@ -36,19 +49,58 @@ class AdminPanelProvider extends PanelProvider
             ->darkMode(false)
             ->defaultThemeMode(ThemeMode::Light)
             ->breadcrumbs(false)
+            ->globalSearch(false)
             ->sidebarWidth('186px')
             ->collapsedSidebarWidth('72px')
+            ->sidebarCollapsibleOnDesktop()
+            ->collapsibleNavigationGroups(false)
             ->font('Inter', url: asset('build/admin/fonts.css'), provider: LocalFontProvider::class)
-            ->theme(asset('build/admin/theme.css'))
+            ->theme(asset('build/admin/theme.css').'?v='.(file_exists(public_path('build/admin/theme.css')) ? filemtime(public_path('build/admin/theme.css')) : time()))
             ->colors([
                 'primary' => '#B6FF00',
             ])
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
-            ->pages([Dashboard::class])
-            ->navigationGroups(['Inicio', 'Contenido'])
-            ->renderHook('panels::content.start', fn (): string => CatalogConnection::enabled() && auth()->check()
+            ->pages([
+                Dashboard::class,
+                StockTarjetas::class,
+                Contabilidad::class,
+                PlacasNfc::class,
+                SolicitudesCambio::class,
+                Cobros::class,
+                PublicacionesSitio::class,
+                ConfiguracionPrecios::class,
+            ])
+            ->navigationGroups(['Inicio', 'Contenido', 'Operación', 'Finanzas', 'Sistema'])
+            ->renderHook(
+                PanelsRenderHook::TOPBAR_START,
+                fn () => view('filament.components.header-title')
+            )
+            ->renderHook(
+                PanelsRenderHook::PAGE_START,
+                fn () => view('filament.components.page-title')
+            )
+            ->renderHook(
+                TablesRenderHook::TOOLBAR_START,
+                fn () => view('filament.components.clientes-toolbar'),
+                scopes: ListClientes::class
+            )
+            ->renderHook(
+                TablesRenderHook::TOOLBAR_START,
+                fn () => view('filament.components.paginas-toolbar'),
+                scopes: ListPaginas::class
+            )
+            ->renderHook(
+                PanelsRenderHook::SIDEBAR_FOOTER,
+                fn (): string => CatalogConnection::enabled() && auth()->check()
                     ? Blade::render('@livewire("catalog-sync-status")')
-                    : '')
+                    : ''
+            )
+            ->renderHook(
+                PanelsRenderHook::SIDEBAR_FOOTER,
+                fn (): string => auth()->check()
+                    ? Blade::render('@include("filament.components.sidebar-user-profile")')
+                    : ''
+            )
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
             ->middleware([
                 EncryptCookies::class,

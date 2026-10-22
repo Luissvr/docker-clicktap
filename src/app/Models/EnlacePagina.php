@@ -17,6 +17,7 @@ class EnlacePagina extends Model
 
     protected $fillable = [
         'tipo',
+        'nombre',
         'etiqueta',
         'url',
         'posicion',

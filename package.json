@@ -1,0 +1,12 @@
+{
+  "name": "docker-clicktap",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "npm --prefix src run build",
+    "build:admin": "npm --prefix src run build:admin",
+    "dev": "npm --prefix src run dev",
+    "dev:admin": "npm --prefix src run dev:admin",
+    "test:ui": "npm --prefix src run test:ui"
+  }
+}

@@ -10,7 +10,11 @@ class Dashboard extends BaseDashboard
 
     protected static ?string $navigationGroup = 'Inicio';
 
-    protected static ?string $navigationIcon = 'heroicon-o-squares-2x2';
+    protected static ?string $navigationLabel = 'Resumen';
+
+    protected static ?string $navigationIcon = 'heroicon-o-home';
+
+    protected static ?int $navigationSort = 1;
 
     protected static string $view = 'filament.pages.dashboard';
 }

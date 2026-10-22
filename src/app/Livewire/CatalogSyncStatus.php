@@ -13,6 +13,11 @@ class CatalogSyncStatus extends Component
     #[Locked]
     public ?int $observedCompletion = null;
 
+    public function mount(): void
+    {
+        $this->observedCompletion = app(CatalogSyncState::class)->status()['completed_at'] ?? null;
+    }
+
     public function synchronize(): void
     {
         abort_unless(CatalogConnection::enabled() && auth()->user()?->activo, 403);
