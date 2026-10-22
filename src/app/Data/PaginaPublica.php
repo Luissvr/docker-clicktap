@@ -4,13 +4,12 @@ namespace App\Data;
 
 use App\Models\EnlacePagina;
 use App\Models\Pagina;
+use App\Support\PageAppearance;
 
 final readonly class PaginaPublica
 {
     /** @param array<string, mixed> $data */
-    private function __construct(private array $data)
-    {
-    }
+    private function __construct(private array $data) {}
 
     public static function fromModel(Pagina $pagina): self
     {
@@ -24,13 +23,29 @@ final readonly class PaginaPublica
             $highlights[] = ['id' => 'location', 'icon' => 'location', 'label' => 'Ubicación', 'value' => $address];
         }
 
-        $contact = collect([$pagina->telefono_publico, $pagina->correo_publico])
+        $phone = trim((string) $pagina->telefono_publico);
+        $email = trim((string) $pagina->correo_publico);
+        $contact = collect([$phone, $email])
             ->filter(fn (?string $value): bool => trim((string) $value) !== '')
             ->map(fn (?string $value): string => trim((string) $value))
-            ->implode(' · ');
+            ->implode("\n");
         if ($contact !== '') {
-            $highlights[] = ['id' => 'contact', 'icon' => 'contact', 'label' => 'Contacto', 'value' => $contact];
+            $highlights[] = [
+                'id' => 'contact',
+                'icon' => 'contact',
+                'label' => 'Contacto',
+                'value' => $contact,
+                'phone' => $phone ?: null,
+                'email' => $email ?: null,
+            ];
         }
+
+        $appearance = PageAppearance::resolve([
+            'color_fondo' => $pagina->color_fondo,
+            'color_texto' => $pagina->color_texto,
+            'color_boton' => $pagina->color_boton,
+            'color_texto_boton' => $pagina->color_texto_boton,
+        ]);
 
         return new self([
             'slug' => $pagina->slug,
@@ -38,8 +53,11 @@ final readonly class PaginaPublica
             'tagline' => null,
             'description' => trim((string) $pagina->descripcion),
             'theme' => $pagina->tema ?: 'default',
+            'typography' => $pagina->tipografia ?: 'inter',
             'logo' => self::publicPath($pagina->logo_path),
             'logoAlt' => "Logo de {$name}",
+            'logoLayout' => $pagina->logo_layout ?: 'original',
+            'logoWidth' => (int) ($pagina->logo_width ?: 160),
             'favicon' => self::publicPath($pagina->logo_path) ?? '/favicon.png',
             'footer' => null,
             'highlights' => $highlights,
@@ -49,10 +67,11 @@ final readonly class PaginaPublica
                 ->values()
                 ->all(),
             'colors' => [
-                'background' => $pagina->color_fondo ?: '#ffffff',
-                'text' => $pagina->color_texto ?: '#000000',
-                'button' => $pagina->color_boton ?: '#111827',
-                'buttonText' => $pagina->color_texto_boton ?: '#ffffff',
+                'background' => $appearance['color_fondo'],
+                'text' => $appearance['color_texto'],
+                'button' => $appearance['color_boton'],
+                'buttonText' => $appearance['color_texto_boton'],
+                'accent' => $appearance['color_acento'],
             ],
         ]);
     }
@@ -72,11 +91,12 @@ final readonly class PaginaPublica
 
         return [
             'type' => $type,
+            'name' => trim((string) $enlace->nombre) ?: null,
             'icon' => match ($type) {
                 'whatsapp', 'instagram', 'facebook', 'review', 'location' => $type,
                 default => 'contact',
             },
-            'label' => trim((string) $enlace->etiqueta) ?: self::defaultLabel($type),
+            'label' => trim((string) ($enlace->etiqueta ?: $enlace->nombre)) ?: self::defaultLabel($type),
             'href' => $url !== '' ? $url : null,
             'copyText' => $copyText !== '' ? $copyText : null,
             'isDisabled' => $url === '' && $copyText === '',

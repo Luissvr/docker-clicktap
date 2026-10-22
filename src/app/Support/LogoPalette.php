@@ -3,12 +3,21 @@
 namespace App\Support;
 
 use Illuminate\Http\UploadedFile;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
 final class LogoPalette
 {
     /** @return array{color_fondo: string, color_texto: string, color_boton: string, color_texto_boton: string}|null */
     public static function from(mixed $upload): ?array
     {
+        if (is_array($upload)) {
+            $upload = reset($upload);
+        }
+
+        if ($upload instanceof TemporaryUploadedFile) {
+            return self::fromContents($upload->get());
+        }
+
         $path = $upload instanceof UploadedFile
             ? $upload->getRealPath()
             : (is_string($upload) && is_file($upload) ? $upload : null);
@@ -19,19 +28,23 @@ final class LogoPalette
     /** @return array{color_fondo: string, color_texto: string, color_boton: string, color_texto_boton: string}|null */
     public static function fromPath(string $path): ?array
     {
-        $info = @getimagesize($path);
+        $contents = @file_get_contents($path);
+
+        return is_string($contents) ? self::fromContents($contents) : null;
+    }
+
+    /** @return array{color_fondo: string, color_texto: string, color_boton: string, color_texto_boton: string}|null */
+    public static function fromContents(string $contents): ?array
+    {
+        $info = @getimagesizefromstring($contents);
 
         if (! is_array($info) || ! isset($info['mime'])) {
             return null;
         }
 
-        $image = match ($info['mime']) {
-            'image/jpeg' => @imagecreatefromjpeg($path),
-            'image/png' => @imagecreatefrompng($path),
-            'image/gif' => @imagecreatefromgif($path),
-            'image/webp' => function_exists('imagecreatefromwebp') ? @imagecreatefromwebp($path) : false,
-            default => false,
-        };
+        $image = in_array($info['mime'], ['image/jpeg', 'image/png', 'image/gif', 'image/webp'], true)
+            ? @imagecreatefromstring($contents)
+            : false;
 
         if (! $image) {
             return null;
@@ -68,14 +81,15 @@ final class LogoPalette
 
         $accent = self::selectAccent($colors);
         $accentHex = self::hex($accent);
-        $background = self::mix($accent, [255, 255, 255], 0.86);
-
-        return [
-            'color_fondo' => self::hex($background),
+        $background = self::hex(self::mix($accent, [255, 255, 255], 0.86));
+        $palette = [
+            'color_fondo' => $background,
             'color_texto' => '#111827',
             'color_boton' => $accentHex,
             'color_texto_boton' => self::luminance($accent) > 0.55 ? '#111827' : '#ffffff',
         ];
+
+        return array_intersect_key(PageAppearance::resolve($palette), $palette);
     }
 
     /** @param array<string, int> $colors @return array{int, int, int} */
@@ -127,7 +141,13 @@ final class LogoPalette
     /** @param array{int, int, int} $color */
     private static function luminance(array $color): float
     {
-        return (($color[0] * 0.299) + ($color[1] * 0.587) + ($color[2] * 0.114)) / 255;
+        $normalized = array_map(static function (int $channel): float {
+            $value = $channel / 255;
+
+            return $value <= 0.04045 ? $value / 12.92 : (($value + 0.055) / 1.055) ** 2.4;
+        }, $color);
+
+        return 0.2126 * $normalized[0] + 0.7152 * $normalized[1] + 0.0722 * $normalized[2];
     }
 
     /** @param array{int, int, int} $color */

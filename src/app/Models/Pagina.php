@@ -28,7 +28,11 @@ class Pagina extends Model
         'telefono_publico',
         'correo_publico',
         'logo_path',
+        'logo_layout',
+        'logo_width',
+        'paleta_personalizada',
         'tema',
+        'tipografia',
         'color_fondo',
         'color_texto',
         'color_boton',
@@ -61,6 +65,7 @@ class Pagina extends Model
     {
         return [
             'activo' => 'boolean',
+            'paleta_personalizada' => 'boolean',
             'publicada_en' => 'datetime',
             'contenido_extra' => 'array',
         ];

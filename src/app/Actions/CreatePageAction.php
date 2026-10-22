@@ -7,6 +7,7 @@ use App\Models\LocalNegocio;
 use App\Models\Pagina;
 use App\Models\User;
 use App\Support\CatalogConnection;
+use App\Support\PageDescription;
 use App\Support\PageRoute;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Gate;
@@ -83,8 +84,8 @@ class CreatePageAction
     {
         return [
             'nombre_publico', 'descripcion', 'direccion_publica', 'telefono_publico',
-            'correo_publico', 'logo_path', 'tema', 'color_fondo', 'color_texto',
-            'color_boton', 'color_texto_boton', 'activo',
+            'correo_publico', 'logo_path', 'tema', 'tipografia', 'color_fondo', 'color_texto',
+            'color_boton', 'color_texto_boton', 'logo_layout', 'logo_width', 'paleta_personalizada', 'activo',
         ];
     }
 
@@ -101,12 +102,16 @@ class CreatePageAction
             'local.direccion_operativa' => ['nullable', 'string', 'max:255'],
             'local.notas_internas' => ['nullable', 'string'],
             'pagina.nombre_publico' => ['required', 'string', 'max:255'],
-            'pagina.descripcion' => ['nullable', 'string', 'max:1000'],
+            'pagina.descripcion' => ['nullable', 'string', new PageDescription],
             'pagina.direccion_publica' => ['nullable', 'string', 'max:255'],
             'pagina.telefono_publico' => ['nullable', 'string', 'max:50'],
             'pagina.correo_publico' => ['nullable', 'email', 'max:255'],
             'pagina.logo_path' => ['nullable', 'string', 'max:2048'],
+            'pagina.logo_layout' => ['nullable', 'in:original,round,rounded'],
+            'pagina.logo_width' => ['nullable', 'integer', 'min:64', 'max:384'],
+            'pagina.paleta_personalizada' => ['nullable', 'boolean'],
             'pagina.tema' => ['nullable', 'string', 'max:50'],
+            'pagina.tipografia' => ['nullable', 'string', 'max:50'],
             'pagina.color_fondo' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'pagina.color_texto' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'pagina.color_boton' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
@@ -114,6 +119,7 @@ class CreatePageAction
             'pagina.activo' => ['nullable', 'boolean'],
             'enlaces' => ['array'],
             'enlaces.*.tipo' => ['required', 'string', 'max:50'],
+            'enlaces.*.nombre' => ['nullable', 'string', 'max:255'],
             'enlaces.*.etiqueta' => ['nullable', 'string', 'max:255'],
             'enlaces.*.url' => ['nullable', 'url:http,https', 'max:2048'],
             'enlaces.*.posicion' => ['required', 'integer', 'min:0', 'distinct'],

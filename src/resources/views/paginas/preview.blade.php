@@ -10,16 +10,33 @@
             ? $pagina->tema
             : 'default';
         $mobilePreview = request()->query('device') === 'mobile';
+        $fontKey = $pagina->tipografia ?? 'inter';
+        $fontFamily = \App\Support\TypographyHelper::fontFamily($fontKey);
+        $googleFontUrl = \App\Support\TypographyHelper::googleFontUrl($fontKey);
+        $appearance = \App\Support\PageAppearance::resolve([
+            'color_fondo' => $pagina->color_fondo,
+            'color_texto' => $pagina->color_texto,
+            'color_boton' => $pagina->color_boton,
+            'color_texto_boton' => $pagina->color_texto_boton,
+        ]);
     @endphp
+    @if ($googleFontUrl)
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="{{ $googleFontUrl }}" rel="stylesheet">
+    @endif
     <style>
         :root {
-            --background: {{ $pagina->color_fondo }};
-            --text: {{ $pagina->color_texto }};
-            --button: {{ $pagina->color_boton }};
-            --button-text: {{ $pagina->color_texto_boton }};
+            --background: {{ $appearance['color_fondo'] }};
+            --text: {{ $appearance['color_texto'] }};
+            --button: {{ $appearance['color_boton'] }};
+            --button-text: {{ $appearance['color_texto_boton'] }};
+            --accent: {{ $appearance['color_acento'] }};
+            --logo-width: {{ $pagina->logo_width ?: 160 }}px;
+            --font-family: {!! $fontFamily !!};
         }
         * { box-sizing: border-box; }
-        body { position: relative; margin: 0; min-height: 100vh; background: var(--background); color: var(--text); font-family: ui-sans-serif, system-ui, sans-serif; }
+        body { position: relative; margin: 0; min-height: 100vh; background: var(--background); color: var(--text); font-family: var(--font-family); }
         body::before { content: ''; position: fixed; inset: 0; pointer-events: none; opacity: .1; }
         body.theme-default::before { background: radial-gradient(circle at 50% -10%, var(--button) 0, transparent 42%); }
         body.theme-barber::before { background: radial-gradient(circle at 12% 0%, var(--button) 0, transparent 35%), repeating-linear-gradient(135deg, transparent 0 34px, var(--button) 35px 36px, transparent 37px 70px); opacity: .14; }
@@ -28,13 +45,23 @@
         main { position: relative; z-index: 1; width: min(100% - 32px, 520px); margin: 0 auto; padding: 48px 0; text-align: center; }
         .preview-device--mobile { display: grid; place-items: center; padding: 24px; background: #d1d5db; }
         .preview-device--mobile main { width: min(100%, 390px); min-height: min(844px, calc(100vh - 48px)); max-height: calc(100vh - 48px); overflow-y: auto; margin: 0; padding: 44px 18px 36px; border: 10px solid #111827; border-radius: 36px; background: var(--background); box-shadow: 0 20px 50px rgb(15 23 42 / .3); }
-        .preview { margin-bottom: 28px; padding: 10px 14px; border: 1px solid currentColor; border-radius: 999px; display: inline-block; font-size: 13px; opacity: .7; }
-        img { display: block; width: 128px; height: 128px; margin: 0 auto; border-radius: 50%; object-fit: cover; }
+        .preview { margin-bottom: 28px; padding: 10px 14px; border: 1px solid currentColor; border-radius: 999px; display: inline-block; font-size: 13px; }
+        .logo-img { display: block; width: min(var(--logo-width), 100%); max-height: 320px; height: auto; margin: 0 auto; object-fit: contain; }
+        .logo-img--round { aspect-ratio: 1; height: var(--logo-width); object-fit: cover; border-radius: 50%; }
+        .logo-img--rounded { aspect-ratio: 1; height: var(--logo-width); object-fit: contain; border-radius: 18px; background: #fff; padding: 8px; }
         h1 { margin: 20px 0 8px; font-size: 32px; }
-        .description { line-height: 1.55; opacity: .85; }
-        .contact { margin: 24px 0; display: grid; gap: 6px; font-size: 15px; }
+        .description { max-width: 100%; line-height: 1.55; text-align: justify; overflow-wrap: anywhere; }
+        .description--unbroken { text-justify: inter-character; }
+        .details { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 24px; margin: 28px 0; text-align: left; }
+        .detail-section { display: flex; align-items: flex-start; gap: 12px; min-width: 0; }
+        .detail-icon { flex: none; width: 21px; height: 21px; color: var(--accent); }
+        .detail-content { min-width: 0; overflow-wrap: anywhere; }
+        .detail-content h2 { margin: 0 0 8px; color: var(--accent); font-size: 15px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+        .detail-content p { margin: 0; }
+        .detail-content a { display: block; color: inherit; text-decoration: none; }
+        .detail-content a + a { margin-top: 6px; }
         .links { display: grid; gap: 12px; margin-top: 28px; }
-        .link-button { display: grid; grid-template-columns: 1.25rem 1fr; align-items: center; width: 100%; min-height: 58px; padding: 14px 18px; border: 1px solid var(--button); border-radius: 14px; background: transparent; color: var(--button); text-decoration: none; font-weight: 700; }
+        .link-button { display: grid; grid-template-columns: 1.25rem 1fr; align-items: center; width: 100%; min-height: 58px; padding: 14px 18px; border: 1px solid var(--button); border-radius: 14px; background: var(--button); color: var(--button-text); text-decoration: none; font-weight: 700; }
         .links button { font: inherit; cursor: pointer; }
         .link-button--disabled { opacity: .7; }
         .link-icon { width: 1.25rem; height: 1.25rem; }
@@ -58,28 +85,30 @@
                     ? '/storage/'.ltrim($pagina->logo_path, '/')
                     : \Illuminate\Support\Facades\Storage::disk($pagina->logo_disk)->temporaryUrl($pagina->logo_path, now()->addMinutes(5)));
         @endphp
-        <img src="{{ $logoUrl }}" alt="Logo de {{ $pagina->nombre_publico }}">
+        <img @class(['logo-img', 'logo-img--round' => $pagina->logo_layout === 'round', 'logo-img--rounded' => $pagina->logo_layout === 'rounded']) src="{{ $logoUrl }}" alt="Logo de {{ $pagina->nombre_publico }}">
     @endif
 
     <h1>{{ $pagina->nombre_publico }}</h1>
 
     @if ($pagina->descripcion)
-        <p class="description">{{ $pagina->descripcion }}</p>
+        <p @class(['description', 'description--unbroken' => preg_match('/\s/u', trim((string) $pagina->descripcion)) === 0])>{{ $pagina->descripcion }}</p>
     @endif
 
-    <div class="contact">
-        @if ($pagina->direccion_publica)<span>{{ $pagina->direccion_publica }}</span>@endif
-        @if ($pagina->telefono_publico)<a href="tel:{{ $pagina->telefono_publico }}">{{ $pagina->telefono_publico }}</a>@endif
-        @if ($pagina->correo_publico)<a href="mailto:{{ $pagina->correo_publico }}">{{ $pagina->correo_publico }}</a>@endif
-    </div>
+    <x-paginas.contact-sections :address="$pagina->direccion_publica" :phone="$pagina->telefono_publico" :email="$pagina->correo_publico" />
 
     <nav class="links" aria-label="Enlaces de {{ $pagina->nombre_publico }}">
         @foreach ($pagina->enlaces->where('activo', true) as $enlace)
             @php
-                $enlaceLabel = $enlace->etiqueta ?: match ($enlace->tipo) {
+                $enlaceLabel = $enlace->etiqueta ?: ($enlace->nombre ?: match ($enlace->tipo) {
                     'transferencia' => 'Datos de transferencia',
+                    'whatsapp' => 'WhatsApp',
+                    'instagram' => 'Instagram',
+                    'facebook' => 'Facebook',
+                    'review' => 'Escribir una reseña',
+                    'location' => 'Cómo llegar',
+                    'web' => 'Página web',
                     default => 'Enlace',
-                };
+                });
             @endphp
             @if ($enlace->copiar_texto && $enlace->texto_copia)
                 <button class="link-button" type="button" data-copy-text="{{ $enlace->texto_copia }}"><x-paginas.link-icon :type="$enlace->tipo" /><span class="link-label">{{ $enlaceLabel }}</span></button>
