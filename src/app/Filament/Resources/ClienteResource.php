@@ -17,11 +17,9 @@ class ClienteResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-user-group';
 
-    protected static ?string $navigationGroup = 'Contenido';
-
     protected static ?string $navigationLabel = 'Clientes';
 
-    protected static ?int $navigationSort = 1;
+    protected static ?int $navigationSort = 2;
 
     protected static ?string $modelLabel = 'cliente';
 

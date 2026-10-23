@@ -42,7 +42,7 @@ class AdminUiTest extends TestCase
         $this->get('/')->assertDontSee('build/admin/');
     }
 
-    public function test_sidebar_displays_official_logo_and_all_five_navigation_groups(): void
+    public function test_sidebar_displays_flat_navigation_without_removed_screens(): void
     {
         $user = User::factory()->make(['activo' => true]);
 
@@ -50,31 +50,29 @@ class AdminUiTest extends TestCase
 
         $response->assertOk()
             ->assertSee('fi-sidebar', false)
-            ->assertSee('clicktap-horizontal.png', false)
-            ->assertSee('Inicio')
-            ->assertSee('Contenido')
-            ->assertSee('Operación')
-            ->assertSee('Finanzas')
-            ->assertSee('Sistema')
+            ->assertSee('clicktap-logo-transparent.png', false)
+            ->assertSee('clicktap-waves.png', false)
+            ->assertSee('Contraer menú')
+            ->assertSee('ct-sidebar-toggle', false)
             ->assertSee('Resumen')
             ->assertSee('Clientes')
             ->assertSee('Locales de negocio')
             ->assertSee('Páginas')
             ->assertSee('Stock de tarjetas')
-            ->assertSee('Placas NFC')
-            ->assertSee('Solicitudes')
             ->assertSee('Contabilidad')
-            ->assertSee('Cobros')
             ->assertSee('Publicaciones')
             ->assertSee('Configuración de precios')
+            ->assertDontSee('Placas NFC')
+            ->assertDontSee('Solicitudes')
+            ->assertDontSee('Cobros')
             ->assertSee('/admin/clientes', false)
             ->assertSee('/admin/local-negocios', false)
             ->assertSee('/admin/paginas', false)
             ->assertSee('/admin/stock-tarjetas', false)
-            ->assertSee('/admin/placas-nfc', false)
-            ->assertSee('/admin/solicitudes-cambio', false)
             ->assertSee('/admin/contabilidad', false)
-            ->assertSee('/admin/cobros', false)
+            ->assertDontSee('/admin/placas-nfc', false)
+            ->assertDontSee('/admin/solicitudes-cambio', false)
+            ->assertDontSee('/admin/cobros', false)
             ->assertSee('/admin/publicaciones-sitio', false)
             ->assertSee('/admin/configuracion-precios', false);
     }

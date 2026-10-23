@@ -16,13 +16,11 @@ class Contabilidad extends Page
 {
     protected static ?string $navigationIcon = 'heroicon-o-banknotes';
 
-    protected static ?string $navigationGroup = 'Finanzas';
-
     protected static ?string $navigationLabel = 'Contabilidad';
 
     protected static ?string $title = 'Contabilidad';
 
-    protected static ?int $navigationSort = 1;
+    protected static ?int $navigationSort = 7;
 
     protected static string $view = 'filament.pages.contabilidad';
 
@@ -152,4 +150,3 @@ class Contabilidad extends Page
             ->mapWithKeys(fn ($row): array => [$row->id => $row->nombre.' ('.($row->proveedor ?: 'Sin proveedor').') — Saldo pendiente: $'.number_format($row->costo_total_clp - $row->pagado_clp, 0, ',', '.')])->all();
     }
 }
-

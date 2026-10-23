@@ -177,6 +177,59 @@ class BusinessLedger
         }, 3);
     }
 
+    public function confirmFieldSale(string $saleId): void
+    {
+        $this->connection()->transaction(function () use ($saleId): void {
+            $sale = $this->connection()->table('ventas')->where('id', $saleId)->lockForUpdate()->first();
+            if (! $sale) {
+                $this->invalid('venta', 'La venta ya no está disponible.');
+            }
+            if ($sale->estado === 'confirmada') {
+                return;
+            }
+            if ($sale->estado !== 'borrador' || trim($sale->cliente_nombre ?? '') === '') {
+                $this->invalid('venta', 'La venta requiere el nombre del cliente y debe seguir en borrador.');
+            }
+
+            $items = $this->connection()->table('venta_items')->where('venta_id', $saleId)->orderBy('id')->get();
+            $card = $this->sku('TAR-GOOGLE');
+            if ((int) $items->sum('cantidad') !== (int) $sale->cantidad_tarjetas || $items->isEmpty()) {
+                $this->invalid('venta', 'Selecciona una cantidad válida de tarjetas Google.');
+            }
+            if ($items->contains(fn (object $item): bool => $item->producto_id !== $card->id || (int) $item->cantidad < 1)) {
+                $this->invalid('venta', 'Esta venta solo admite tarjetas Google.');
+            }
+            if ((int) $items->sum(fn (object $item): int => (int) $item->cantidad * (int) $item->precio_unitario_clp) !== (int) $sale->precio_recibido_clp) {
+                $this->invalid('venta', 'El total recibido no coincide con el detalle de la venta.');
+            }
+
+            foreach ($items as $item) {
+                $key = 'venta-calle:'.$saleId.':'.$item->id;
+                $orderId = $this->reserveOrder(
+                    $item->producto_id,
+                    (int) $item->cantidad,
+                    (int) $item->precio_unitario_clp,
+                    $sale->cliente_nombre,
+                    'directo',
+                    $saleId,
+                    null,
+                    $key.':reserva',
+                );
+                $this->fulfillOrder($orderId, $key.':entrega');
+                $this->connection()->table('venta_items')->where('id', $item->id)->update([
+                    'pedido_id' => $orderId,
+                    'updated_at' => now(),
+                ]);
+            }
+
+            $this->connection()->table('ventas')->where('id', $saleId)->update([
+                'estado' => 'confirmada',
+                'confirmada_en' => now('America/Santiago'),
+                'updated_at' => now(),
+            ]);
+        }, 3);
+    }
+
     public function fulfillOrder(string $orderId, string $key): void
     {
         $this->connection()->transaction(function () use ($orderId, $key): void {
@@ -307,35 +360,37 @@ class BusinessLedger
         }, 3);
     }
 
-    public function snapshot(): array
+    public function snapshot(string $section = 'all'): array
     {
         $db = $this->connection();
         $products = $db->table('inventario_productos')->orderBy('sku')->get();
+        $orders = collect();
 
-        $rawOrders = $db->table('inventario_pedidos as p')->join('inventario_productos as i', 'i.id', '=', 'p.producto_id')
-            ->leftJoinSub($this->orderPayments(), 'payments', 'payments.pedido_id', '=', 'p.id')
-            ->select('p.*', 'i.nombre as producto_nombre', 'i.sku as producto_sku')
-            ->selectRaw('COALESCE(payments.pagado, 0) AS pagado_clp')
-            ->orderByDesc('p.created_at')->limit(100)->get();
+        if (in_array($section, ['all', 'pedidos'], true)) {
+            $orders = $db->table('inventario_pedidos as p')->join('inventario_productos as i', 'i.id', '=', 'p.producto_id')
+                ->leftJoinSub($this->orderPayments(), 'payments', 'payments.pedido_id', '=', 'p.id')
+                ->select('p.*', 'i.nombre as producto_nombre', 'i.sku as producto_sku')
+                ->selectRaw('COALESCE(payments.pagado, 0) AS pagado_clp')
+                ->orderByDesc('p.created_at')->limit(100)->get()
+                ->map(function ($order) {
+                    $paid = (int) $order->pagado_clp;
+                    $total = $order->cantidad * $order->precio_unitario_clp;
+                    $order->total_clp = $total;
+                    $order->pagado_clp = $paid;
+                    $order->saldo_pendiente_clp = max(0, $total - $paid);
+                    if ($order->estado === 'cancelado') {
+                        $order->estado_pago = $paid > 0 ? 'con_abono' : 'sin_cobro';
+                    } elseif ($paid >= $total && $total > 0) {
+                        $order->estado_pago = 'pagado';
+                    } elseif ($paid > 0) {
+                        $order->estado_pago = 'parcial';
+                    } else {
+                        $order->estado_pago = 'pendiente';
+                    }
 
-        $orders = $rawOrders->map(function ($order) {
-            $paid = (int) $order->pagado_clp;
-            $total = $order->cantidad * $order->precio_unitario_clp;
-            $order->total_clp = $total;
-            $order->pagado_clp = $paid;
-            $order->saldo_pendiente_clp = max(0, $total - $paid);
-            if ($order->estado === 'cancelado') {
-                $order->estado_pago = $paid > 0 ? 'con_abono' : 'sin_cobro';
-            } elseif ($paid >= $total && $total > 0) {
-                $order->estado_pago = 'pagado';
-            } elseif ($paid > 0) {
-                $order->estado_pago = 'parcial';
-            } else {
-                $order->estado_pago = 'pendiente';
-            }
-
-            return $order;
-        });
+                    return $order;
+                });
+        }
 
         $bySku = $products->keyBy('sku');
         $card = $bySku->get('TAR-GOOGLE');
@@ -348,17 +403,25 @@ class BusinessLedger
         $deliveredChips = $deliveredOrders->where('producto_sku', 'NFC-CHIP')->sum('cantidad');
         $deliveredAcrylics = $deliveredOrders->where('producto_sku', 'ACR-PERSONALIZADO')->sum('cantidad');
 
-        $productionMovements = $db->table('inventario_movimientos as m')
-            ->join('inventario_productos as i', 'i.id', '=', 'm.producto_id')
-            ->whereIn('m.tipo', ['apartado_produccion', 'liberacion_produccion', 'consumo_produccion', 'produccion'])
-            ->select('m.*', 'i.nombre as producto_nombre', 'i.sku as producto_sku')
-            ->orderByDesc('m.created_at')->limit(50)->get();
+        $productionMovements = collect();
+        if (in_array($section, ['all', 'produccion'], true)) {
+            $productionMovements = $db->table('inventario_movimientos as m')
+                ->join('inventario_productos as i', 'i.id', '=', 'm.producto_id')
+                ->whereIn('m.tipo', ['apartado_produccion', 'liberacion_produccion', 'consumo_produccion', 'produccion'])
+                ->select('m.*', 'i.nombre as producto_nombre', 'i.sku as producto_sku')
+                ->orderByDesc('m.created_at')->limit(50)->get();
+        }
+
+        $movements = collect();
+        if (in_array($section, ['all', 'historial'], true)) {
+            $movements = $db->table('inventario_movimientos as m')->join('inventario_productos as i', 'i.id', '=', 'm.producto_id')
+                ->select('m.*', 'i.nombre as producto_nombre', 'i.sku as producto_sku')->orderByDesc('m.created_at')->limit(100)->get();
+        }
 
         return [
             'products' => $products,
             'orders' => $orders,
-            'movements' => $db->table('inventario_movimientos as m')->join('inventario_productos as i', 'i.id', '=', 'm.producto_id')
-                ->select('m.*', 'i.nombre as producto_nombre', 'i.sku as producto_sku')->orderByDesc('m.created_at')->limit(100)->get(),
+            'movements' => $movements,
             'breakdown' => [
                 'disponible' => [
                     'total' => $products->sum(fn ($p) => max(0, $p->existencia - $p->reservado_pedidos - $p->reservado_produccion)),

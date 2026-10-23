@@ -8,8 +8,6 @@ class Dashboard extends BaseDashboard
 {
     protected static ?string $title = 'Resumen';
 
-    protected static ?string $navigationGroup = 'Inicio';
-
     protected static ?string $navigationLabel = 'Resumen';
 
     protected static ?string $navigationIcon = 'heroicon-o-home';

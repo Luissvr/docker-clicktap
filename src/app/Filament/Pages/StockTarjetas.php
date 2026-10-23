@@ -18,15 +18,15 @@ class StockTarjetas extends Page
 {
     protected static ?string $navigationIcon = 'heroicon-o-square-3-stack-3d';
 
-    protected static ?string $navigationGroup = 'Operación';
-
     protected static ?string $navigationLabel = 'Stock de tarjetas';
 
     protected static ?string $title = 'Stock de tarjetas';
 
-    protected static ?int $navigationSort = 1;
+    protected static ?int $navigationSort = 6;
 
     protected static string $view = 'filament.pages.stock-tarjetas';
+
+    protected ?string $maxContentWidth = 'full';
 
     public string $activeTab = 'inventario';
 
@@ -42,7 +42,7 @@ class StockTarjetas extends Page
 
     public function getViewData(): array
     {
-        $data = app(BusinessLedger::class)->snapshot();
+        $data = app(BusinessLedger::class)->snapshot($this->activeTab);
         $term = mb_strtolower(trim($this->buscar));
 
         if ($term !== '') {
@@ -70,114 +70,117 @@ class StockTarjetas extends Page
         return $data;
     }
 
-    protected function getHeaderActions(): array
+    public function updatedActiveTab(): void
     {
-        return [
-            Action::make('apertura')->label('Cargar inventario inicial (50/20/50)')->color('primary')
-                ->requiresConfirmation()
-                ->modalHeading('Cargar inventario inicial informado')
-                ->modalDescription('Se crearán las 50 tarjetas Google, 20 acrílicos sin NFC y 50 chips NFC (con 20 apartados para acrílicos y 30 libres para venta individual). Esta acción es idempotente.')
-                ->form([
-                    DatePicker::make('fecha')->label('Fecha de apertura')->default(now('America/Santiago')->toDateString())->required(),
-                ])
-                ->action(function (array $data): void {
-                    app(BusinessLedger::class)->loadInitialInventory(50, 20, 50, 20, null, $data['fecha']);
-                    Notification::make()->success()->title('Inventario inicial cargado exitosamente')->send();
-                }),
+        $this->buscar = '';
+    }
 
-            Action::make('entrada')->label('Registrar compra / entrada')->form([
-                Select::make('producto_id')->label('Producto')->options(fn (): array => $this->productOptions())->required()->searchable(),
-                TextInput::make('cantidad')->numeric()->integer()->minValue(1)->required(),
-                TextInput::make('costo_total_clp')->label('Costo total CLP')->helperText('Déjalo vacío si todavía no conoces el costo.')->numeric()->integer()->minValue(0),
-                TextInput::make('pagado_clp')->label('Pagado CLP')->numeric()->integer()->minValue(0)->default(0)->required(),
-                TextInput::make('proveedor')->maxLength(255),
-                TextInput::make('documento')->label('Comprobante / referencia')->maxLength(255),
-                DatePicker::make('fecha')->default(now('America/Santiago')->toDateString())->required(),
-                Hidden::make('clave_operacion')->default(fn (): string => (string) Str::uuid()),
-            ])->action(function (array $data): void {
-                app(BusinessLedger::class)->receive($data['producto_id'], (int) $data['cantidad'], $this->nullableInt($data['costo_total_clp'] ?? null), (int) $data['pagado_clp'], $data['proveedor'] ?? null, $data['documento'] ?? null, $data['fecha'], $data['clave_operacion']);
-                Notification::make()->success()->title('Entrada registrada')->send();
-            }),
+    public function entradaAction(): Action
+    {
+        return Action::make('entrada')->label('Registrar compra / entrada')->form([
+            Select::make('producto_id')->label('Producto')->options(fn (): array => $this->productOptions())->required()->searchable(),
+            TextInput::make('cantidad')->numeric()->integer()->minValue(1)->required(),
+            TextInput::make('costo_total_clp')->label('Costo total CLP')->helperText('Déjalo vacío si todavía no conoces el costo.')->numeric()->integer()->minValue(0),
+            TextInput::make('pagado_clp')->label('Pagado CLP')->numeric()->integer()->minValue(0)->default(0)->required(),
+            TextInput::make('proveedor')->maxLength(255),
+            TextInput::make('documento')->label('Comprobante / referencia')->maxLength(255),
+            DatePicker::make('fecha')->default(now('America/Santiago')->toDateString())->required(),
+            Hidden::make('clave_operacion')->default(fn (): string => (string) Str::uuid()),
+        ])->action(function (array $data): void {
+            app(BusinessLedger::class)->receive($data['producto_id'], (int) $data['cantidad'], $this->nullableInt($data['costo_total_clp'] ?? null), (int) $data['pagado_clp'], $data['proveedor'] ?? null, $data['documento'] ?? null, $data['fecha'], $data['clave_operacion']);
+            Notification::make()->success()->title('Entrada registrada')->send();
+        });
+    }
 
-            Action::make('reservar')->label('Crear pedido / reserva')->form([
-                Select::make('producto_id')->label('Producto vendible')->options(fn (): array => $this->productOptions(true))->required()->searchable(),
-                TextInput::make('cantidad')->numeric()->integer()->minValue(1)->required(),
-                TextInput::make('precio_unitario_clp')->label('Precio por unidad CLP')->numeric()->integer()->minValue(0)->required(),
-                TextInput::make('cliente')->label('Cliente / referencia')->maxLength(255),
-                Select::make('canal')->options([
-                    'directo' => 'Directo',
-                    'whatsapp' => 'WhatsApp',
-                    'mercadolibre' => 'Mercado Libre',
-                    'marketplace' => 'Marketplace',
-                ])->default('directo')->required(),
-                TextInput::make('referencia_externa')->label('Referencia externa / folio')->maxLength(255),
-                DatePicker::make('reservado_hasta')->label('Revisar reserva el día')->helperText('Fecha informativa de seguimiento comercial.'),
-                TextInput::make('abono_inicial_clp')->label('Abono inicial recibido CLP')->numeric()->integer()->minValue(0)->default(0)->helperText('Si el cliente paga un anticipo al reservar, se registra automáticamente en caja.'),
-                Hidden::make('clave_operacion')->default(fn (): string => (string) Str::uuid()),
-            ])->action(function (array $data): void {
-                $orderId = app(BusinessLedger::class)->reserveOrder($data['producto_id'], (int) $data['cantidad'], (int) $data['precio_unitario_clp'], $data['cliente'] ?? null, $data['canal'], $data['referencia_externa'] ?? null, $data['reservado_hasta'] ?? null, $data['clave_operacion']);
-                if (! empty($data['abono_inicial_clp']) && (int) $data['abono_inicial_clp'] > 0) {
-                    app(BusinessLedger::class)->orderPayment($orderId, (int) $data['abono_inicial_clp'], now('America/Santiago')->toDateString(), $data['clave_operacion'].':abono');
-                }
-                Notification::make()->success()->title('Pedido y reserva registrados')->send();
-            }),
+    public function reservarAction(): Action
+    {
+        return Action::make('reservar')->label('Crear pedido / reserva')->form([
+            Select::make('producto_id')->label('Producto vendible')->options(fn (): array => $this->productOptions(true))->required()->searchable(),
+            TextInput::make('cantidad')->numeric()->integer()->minValue(1)->required(),
+            TextInput::make('precio_unitario_clp')->label('Precio por unidad CLP')->numeric()->integer()->minValue(0)->required(),
+            TextInput::make('cliente')->label('Cliente / referencia')->maxLength(255),
+            Select::make('canal')->options([
+                'directo' => 'Directo',
+                'whatsapp' => 'WhatsApp',
+                'mercadolibre' => 'Mercado Libre',
+                'marketplace' => 'Marketplace',
+            ])->default('directo')->required(),
+            TextInput::make('referencia_externa')->label('Referencia externa / folio')->maxLength(255),
+            DatePicker::make('reservado_hasta')->label('Revisar reserva el día')->helperText('Fecha informativa de seguimiento comercial.'),
+            TextInput::make('abono_inicial_clp')->label('Abono inicial recibido CLP')->numeric()->integer()->minValue(0)->default(0)->helperText('Si el cliente paga un anticipo al reservar, se registra automáticamente en caja.'),
+            Hidden::make('clave_operacion')->default(fn (): string => (string) Str::uuid()),
+        ])->action(function (array $data): void {
+            $orderId = app(BusinessLedger::class)->reserveOrder($data['producto_id'], (int) $data['cantidad'], (int) $data['precio_unitario_clp'], $data['cliente'] ?? null, $data['canal'], $data['referencia_externa'] ?? null, $data['reservado_hasta'] ?? null, $data['clave_operacion']);
+            if (! empty($data['abono_inicial_clp']) && (int) $data['abono_inicial_clp'] > 0) {
+                app(BusinessLedger::class)->orderPayment($orderId, (int) $data['abono_inicial_clp'], now('America/Santiago')->toDateString(), $data['clave_operacion'].':abono');
+            }
+            Notification::make()->success()->title('Pedido y reserva registrados')->send();
+        });
+    }
 
-            Action::make('producir')->label('Registrar acrílicos terminados')->form([
-                TextInput::make('cantidad')->label('Cantidad a fabricar')->numeric()->integer()->minValue(1)->helperText('Consume 1 Acrílico Base y 1 Chip apartado por cada unidad.')->required(),
-                TextInput::make('impresion_clp')->label('Costo total de impresión CLP')->helperText('Vacío si aún no se conoce. Si es gratis, ingresa 0.')->numeric()->integer()->minValue(0),
-                Toggle::make('impresion_pagada')->label('Impresión pagada con dinero de caja')->default(false),
-                DatePicker::make('fecha')->label('Fecha de pago')->default(now('America/Santiago')->toDateString())->required(),
-                Hidden::make('clave_operacion')->default(fn (): string => (string) Str::uuid()),
-            ])->action(function (array $data): void {
-                app(BusinessLedger::class)->produce((int) $data['cantidad'], $this->nullableInt($data['impresion_clp'] ?? null), (bool) $data['impresion_pagada'], $data['fecha'], $data['clave_operacion']);
-                Notification::make()->success()->title('Producción de acrílicos registrada')->send();
-            }),
+    public function producirAction(): Action
+    {
+        return Action::make('producir')->label('Registrar acrílicos terminados')->form([
+            TextInput::make('cantidad')->label('Cantidad a fabricar')->numeric()->integer()->minValue(1)->helperText('Consume 1 Acrílico Base y 1 Chip apartado por cada unidad.')->required(),
+            TextInput::make('impresion_clp')->label('Costo total de impresión CLP')->helperText('Vacío si aún no se conoce. Si es gratis, ingresa 0.')->numeric()->integer()->minValue(0),
+            Toggle::make('impresion_pagada')->label('Impresión pagada con dinero de caja')->default(false),
+            DatePicker::make('fecha')->label('Fecha de pago')->default(now('America/Santiago')->toDateString())->required(),
+            Hidden::make('clave_operacion')->default(fn (): string => (string) Str::uuid()),
+        ])->action(function (array $data): void {
+            app(BusinessLedger::class)->produce((int) $data['cantidad'], $this->nullableInt($data['impresion_clp'] ?? null), (bool) $data['impresion_pagada'], $data['fecha'], $data['clave_operacion']);
+            Notification::make()->success()->title('Producción de acrílicos registrada')->send();
+        });
+    }
 
-            Action::make('apartarChips')->label('Apartar chips')->color('gray')->form([
-                TextInput::make('cantidad')->label('Cantidad de chips a apartar')->numeric()->integer()->minValue(1)->default(20)->helperText('Los aparta para producción de acrílicos sin consumirlos aún.')->required(),
-                Hidden::make('clave_operacion')->default(fn (): string => (string) Str::uuid()),
-            ])->action(function (array $data): void {
-                app(BusinessLedger::class)->reserveProduction((int) $data['cantidad'], $data['clave_operacion']);
-                Notification::make()->success()->title('Chips apartados para producción')->send();
-            }),
+    public function apartarChipsAction(): Action
+    {
+        return Action::make('apartarChips')->label('Apartar chips')->color('gray')->form([
+            TextInput::make('cantidad')->label('Cantidad de chips a apartar')->numeric()->integer()->minValue(1)->default(20)->helperText('Los aparta para producción de acrílicos sin consumirlos aún.')->required(),
+            Hidden::make('clave_operacion')->default(fn (): string => (string) Str::uuid()),
+        ])->action(function (array $data): void {
+            app(BusinessLedger::class)->reserveProduction((int) $data['cantidad'], $data['clave_operacion']);
+            Notification::make()->success()->title('Chips apartados para producción')->send();
+        });
+    }
 
-            Action::make('liberarChips')->label('Liberar chips')->color('gray')->form([
-                TextInput::make('cantidad')->label('Cantidad a devolver a venta libre')->numeric()->integer()->minValue(1)->required(),
-                Hidden::make('clave_operacion')->default(fn (): string => (string) Str::uuid()),
-            ])->action(function (array $data): void {
-                app(BusinessLedger::class)->reserveProduction((int) $data['cantidad'], $data['clave_operacion'], true);
-                Notification::make()->success()->title('Chips liberados para venta libre')->send();
-            }),
+    public function liberarChipsAction(): Action
+    {
+        return Action::make('liberarChips')->label('Liberar chips')->color('gray')->form([
+            TextInput::make('cantidad')->label('Cantidad a devolver a venta libre')->numeric()->integer()->minValue(1)->required(),
+            Hidden::make('clave_operacion')->default(fn (): string => (string) Str::uuid()),
+        ])->action(function (array $data): void {
+            app(BusinessLedger::class)->reserveProduction((int) $data['cantidad'], $data['clave_operacion'], true);
+            Notification::make()->success()->title('Chips liberados para venta libre')->send();
+        });
+    }
 
-            Action::make('ajuste')->label('Ajuste de inventario')->color('gray')->form([
-                Select::make('producto_id')->label('Producto')->options(fn (): array => $this->productOptions())->required(),
-                Radio::make('sentido')->label('Sentido del ajuste')->options([
-                    'merma' => 'Disminución / Merma (-)',
-                    'positivo' => 'Incremento / Recuento (+)',
-                ])->default('merma')->required(),
-                TextInput::make('cantidad')->numeric()->integer()->minValue(1)->required(),
-                TextInput::make('motivo')->label('Motivo obligatorio')->helperText('Describe la causa (ej. chip defectuoso, conteo físico, rotura).')->required()->maxLength(255),
-                Hidden::make('clave_operacion')->default(fn (): string => (string) Str::uuid()),
-            ])->action(function (array $data): void {
-                $diff = $data['sentido'] === 'merma' ? -((int) $data['cantidad']) : (int) $data['cantidad'];
-                app(BusinessLedger::class)->adjust($data['producto_id'], $diff, $data['motivo'], $data['clave_operacion']);
-                Notification::make()->success()->title('Ajuste de stock registrado')->send();
-            }),
+    public function ajusteAction(): Action
+    {
+        return Action::make('ajuste')->label('Ajuste de inventario')->color('gray')->form([
+            Select::make('producto_id')->label('Producto')->options(fn (): array => $this->productOptions())->required(),
+            Radio::make('sentido')->label('Sentido del ajuste')->options([
+                'merma' => 'Disminución / Merma (-)',
+                'positivo' => 'Incremento / Recuento (+)',
+            ])->default('merma')->required(),
+            TextInput::make('cantidad')->numeric()->integer()->minValue(1)->required(),
+            TextInput::make('motivo')->label('Motivo obligatorio')->helperText('Describe la causa (ej. chip defectuoso, conteo físico, rotura).')->required()->maxLength(255),
+            Hidden::make('clave_operacion')->default(fn (): string => (string) Str::uuid()),
+        ])->action(function (array $data): void {
+            $diff = $data['sentido'] === 'merma' ? -((int) $data['cantidad']) : (int) $data['cantidad'];
+            app(BusinessLedger::class)->adjust($data['producto_id'], $diff, $data['motivo'], $data['clave_operacion']);
+            Notification::make()->success()->title('Ajuste de stock registrado')->send();
+        });
+    }
 
-            Action::make('precio')->label('Precio sugerido')->color('gray')->form([
-                Select::make('producto_id')->label('Producto vendible')->options(fn (): array => $this->productOptions(true))->required(),
-                TextInput::make('precio_clp')->label('Precio CLP')->numeric()->integer()->minValue(0),
-            ])->action(function (array $data): void {
-                app(BusinessLedger::class)->setPrice($data['producto_id'], $this->nullableInt($data['precio_clp'] ?? null));
-                Notification::make()->success()->title('Precio actualizado')->send();
-            }),
-
-            Action::make('catalogo')->label('Preparar catálogo')->color('gray')
-                ->requiresConfirmation()->action(function (): void {
-                    app(BusinessLedger::class)->initializeCatalog();
-                    Notification::make()->success()->title('Catálogo base preparado')->send();
-                }),
-        ];
+    public function precioAction(): Action
+    {
+        return Action::make('precio')->label('Precio sugerido')->color('gray')->form([
+            Select::make('producto_id')->label('Producto vendible')->options(fn (): array => $this->productOptions(true))->required(),
+            TextInput::make('precio_clp')->label('Precio CLP')->numeric()->integer()->minValue(0),
+        ])->action(function (array $data): void {
+            app(BusinessLedger::class)->setPrice($data['producto_id'], $this->nullableInt($data['precio_clp'] ?? null));
+            Notification::make()->success()->title('Precio actualizado')->send();
+        });
     }
 
     public function deliver(string $id): void
@@ -215,4 +218,3 @@ class StockTarjetas extends Page
         return $value === null || $value === '' ? null : (int) $value;
     }
 }
-

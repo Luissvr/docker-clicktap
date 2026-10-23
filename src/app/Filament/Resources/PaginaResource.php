@@ -27,11 +27,9 @@ class PaginaResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-document-duplicate';
 
-    protected static ?string $navigationGroup = 'Contenido';
-
     protected static ?string $navigationLabel = 'Páginas';
 
-    protected static ?int $navigationSort = 3;
+    protected static ?int $navigationSort = 4;
 
     protected static ?string $modelLabel = 'página';
 

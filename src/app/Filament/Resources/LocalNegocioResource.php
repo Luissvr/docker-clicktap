@@ -19,11 +19,9 @@ class LocalNegocioResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-building-storefront';
 
-    protected static ?string $navigationGroup = 'Contenido';
-
     protected static ?string $navigationLabel = 'Locales de negocio';
 
-    protected static ?int $navigationSort = 2;
+    protected static ?int $navigationSort = 3;
 
     protected static ?string $modelLabel = 'local';
 

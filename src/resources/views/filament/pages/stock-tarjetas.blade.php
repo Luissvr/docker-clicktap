@@ -1,227 +1,84 @@
 <x-filament-panels::page>
-    <div class="space-y-4">
-        <!-- Subtítulo e información clave -->
-        <p class="text-sm text-gray-600">
-            Control integral de stock físico, pedidos comerciales, estación de producción y trazabilidad. Los insumos se descuentan una sola vez al transformarse o entregarse.
-        </p>
+    <div class="ct-stock">
+        <nav class="ct-stock-nav" aria-label="Vistas de stock">
+            @foreach (['inventario' => 'Inventario', 'pedidos' => 'Pedidos y reservas', 'produccion' => 'Producción', 'historial' => 'Historial'] as $tab => $label)
+                <button
+                    type="button"
+                    wire:click="$set('activeTab', '{{ $tab }}')"
+                    @class(['ct-stock-tab', 'is-active' => $activeTab === $tab])
+                    aria-current="{{ $activeTab === $tab ? 'page' : 'false' }}"
+                >{{ $label }}</button>
+            @endforeach
+        </nav>
 
-        <!-- Indicadores principales con desglose por producto -->
-        <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <!-- DISPONIBLE -->
-            <div class="rounded-xl border border-[#DCE0D5] bg-white p-4 shadow-sm">
-                <div class="flex items-center justify-between">
-                    <span class="text-xs font-semibold uppercase tracking-wider text-gray-500">Disponible para venta</span>
-                    <span class="inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" title="Unidades libres"></span>
-                </div>
-                <div class="mt-2 text-2xl font-bold text-[#101010]">
-                    {{ number_format($breakdown['disponible']['total'], 0, ',', '.') }}
-                    <span class="text-xs font-normal text-gray-500">uds.</span>
-                </div>
-                <div class="mt-2 flex flex-wrap gap-1.5 text-xs text-gray-600">
-                    <span class="rounded bg-gray-100 px-1.5 py-0.5">Google: {{ $breakdown['disponible']['cards'] }}</span>
-                    <span class="rounded bg-gray-100 px-1.5 py-0.5">Chips libres: {{ $breakdown['disponible']['chips'] }}</span>
-                    <span class="rounded bg-gray-100 px-1.5 py-0.5">Acrílicos listos: {{ $breakdown['disponible']['finished'] }}</span>
-                </div>
-            </div>
-
-            <!-- RESERVADO -->
-            <div class="rounded-xl border border-[#DCE0D5] bg-white p-4 shadow-sm">
-                <div class="flex items-center justify-between">
-                    <span class="text-xs font-semibold uppercase tracking-wider text-gray-500">Reservado a pedidos</span>
-                    <span class="inline-flex h-2.5 w-2.5 rounded-full bg-amber-500" title="Comprometido"></span>
-                </div>
-                <div class="mt-2 text-2xl font-bold text-[#101010]">
-                    {{ number_format($breakdown['reservado']['total'], 0, ',', '.') }}
-                    <span class="text-xs font-normal text-gray-500">uds.</span>
-                </div>
-                <div class="mt-2 flex flex-wrap gap-1.5 text-xs text-gray-600">
-                    <span class="rounded bg-gray-100 px-1.5 py-0.5">Google: {{ $breakdown['reservado']['cards'] }}</span>
-                    <span class="rounded bg-gray-100 px-1.5 py-0.5">Chips: {{ $breakdown['reservado']['chips'] }}</span>
-                    <span class="rounded bg-gray-100 px-1.5 py-0.5">Acrílicos: {{ $breakdown['reservado']['finished'] }}</span>
-                </div>
-            </div>
-
-            <!-- EN PROCESO -->
-            <div class="rounded-xl border border-[#DCE0D5] bg-white p-4 shadow-sm">
-                <div class="flex items-center justify-between">
-                    <span class="text-xs font-semibold uppercase tracking-wider text-gray-500">En proceso / Producción</span>
-                    <span class="inline-flex h-2.5 w-2.5 rounded-full bg-blue-500" title="En preparación"></span>
-                </div>
-                <div class="mt-2 text-2xl font-bold text-[#101010]">
-                    {{ number_format($breakdown['proceso']['capacidad_acrilicos'], 0, ',', '.') }}
-                    <span class="text-xs font-normal text-gray-500">ensambles listos</span>
-                </div>
-                <div class="mt-2 flex flex-wrap gap-1.5 text-xs text-gray-600">
-                    <span class="rounded bg-blue-50 text-blue-800 px-1.5 py-0.5">Bases: {{ $breakdown['proceso']['bases'] }}</span>
-                    <span class="rounded bg-blue-50 text-blue-800 px-1.5 py-0.5">Chips apartados: {{ $breakdown['proceso']['chips_apartados'] }}</span>
-                </div>
-            </div>
-
-            <!-- VENDIDO -->
-            <div class="rounded-xl border border-[#DCE0D5] bg-white p-4 shadow-sm">
-                <div class="flex items-center justify-between">
-                    <span class="text-xs font-semibold uppercase tracking-wider text-gray-500">Vendido (Entregado)</span>
-                    <span class="inline-flex h-2.5 w-2.5 rounded-full bg-slate-400" title="Entregado"></span>
-                </div>
-                <div class="mt-2 text-2xl font-bold text-[#101010]">
-                    {{ number_format($breakdown['vendido']['total'], 0, ',', '.') }}
-                    <span class="text-xs font-normal text-gray-500">uds.</span>
-                </div>
-                <div class="mt-2 flex flex-wrap gap-1.5 text-xs text-gray-600">
-                    <span class="rounded bg-gray-100 px-1.5 py-0.5">Google: {{ $breakdown['vendido']['cards'] }}</span>
-                    <span class="rounded bg-gray-100 px-1.5 py-0.5">Chips: {{ $breakdown['vendido']['chips'] }}</span>
-                    <span class="rounded bg-gray-100 px-1.5 py-0.5">Acrílicos: {{ $breakdown['vendido']['finished'] }}</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- CONTENEDOR PRINCIPAL CON PESTAÑAS (NORMAS GRÁFICAS CLICKTAP) -->
-        <div class="rounded-xl border border-[#DCE0D5] bg-white shadow-sm overflow-hidden">
-            <!-- Barra de Pestañas -->
-            <div class="border-b border-[#DCE0D5] bg-white px-5 pt-2">
-                <nav class="-mb-px flex space-x-6" aria-label="Tabs">
-                    <!-- Pestaña 1: Inventario -->
-                    <button
-                        type="button"
-                        wire:click="$set('activeTab', 'inventario')"
-                        class="whitespace-nowrap py-3 px-2 text-sm font-medium transition-colors border-b-[3px] {{ $activeTab === 'inventario' ? 'border-[#B6FF00] font-semibold text-[#101010]' : 'border-transparent text-[#596052] hover:text-[#101010]' }}"
-                    >
-                        📦 Inventario
-                        <span class="ml-1.5 rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">{{ $products->count() }}</span>
-                    </button>
-
-                    <!-- Pestaña 2: Pedidos y reservas -->
-                    <button
-                        type="button"
-                        wire:click="$set('activeTab', 'pedidos')"
-                        class="whitespace-nowrap py-3 px-2 text-sm font-medium transition-colors border-b-[3px] {{ $activeTab === 'pedidos' ? 'border-[#B6FF00] font-semibold text-[#101010]' : 'border-transparent text-[#596052] hover:text-[#101010]' }}"
-                    >
-                        📋 Pedidos y reservas
-                        <span class="ml-1.5 rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">{{ $orders->count() }}</span>
-                    </button>
-
-                    <!-- Pestaña 3: Producción -->
-                    <button
-                        type="button"
-                        wire:click="$set('activeTab', 'produccion')"
-                        class="whitespace-nowrap py-3 px-2 text-sm font-medium transition-colors border-b-[3px] {{ $activeTab === 'produccion' ? 'border-[#B6FF00] font-semibold text-[#101010]' : 'border-transparent text-[#596052] hover:text-[#101010]' }}"
-                    >
-                        ⚙️ Producción
-                        @if ($production['chipsApartados'] > 0)
-                            <span class="ml-1.5 rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-800 font-medium">{{ $production['capacidadEnsamblaje'] }} listos</span>
-                        @endif
-                    </button>
-
-                    <!-- Pestaña 4: Historial -->
-                    <button
-                        type="button"
-                        wire:click="$set('activeTab', 'historial')"
-                        class="whitespace-nowrap py-3 px-2 text-sm font-medium transition-colors border-b-[3px] {{ $activeTab === 'historial' ? 'border-[#B6FF00] font-semibold text-[#101010]' : 'border-transparent text-[#596052] hover:text-[#101010]' }}"
-                    >
-                        🕒 Historial
-                        <span class="ml-1.5 rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">{{ $movements->count() }}</span>
-                    </button>
-                </nav>
-            </div>
-
-            <!-- CONTENIDO DE LAS PESTAÑAS -->
-            <div class="p-6">
-                <!-- ========================================== -->
-                <!-- PESTAÑA 1: INVENTARIO                     -->
-                <!-- ========================================== -->
+        <div class="ct-stock-surface">
+            <div class="{{ $activeTab === 'inventario' ? '' : 'p-4 sm:p-6' }}">
                 @if ($activeTab === 'inventario')
-                    <div class="space-y-4">
-                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                            <div class="w-full sm:max-w-xs">
-                                <input
-                                    type="search"
-                                    wire:model.live.debounce.300ms="buscar"
-                                    placeholder="Buscar por nombre, SKU..."
-                                    class="w-full rounded-lg border-[#8C9681] text-sm focus:border-[#375500] focus:ring-[#375500]"
-                                >
+                    <section aria-label="Inventario de productos">
+                        <div class="ct-stock-toolbar">
+                            <div>
+                                <h2>Productos</h2>
+                                <p>{{ $products->count() }} {{ $products->count() === 1 ? 'producto' : 'productos' }} en inventario</p>
                             </div>
-                            <div class="text-xs text-gray-500">
-                                Mostrando {{ $products->count() }} artículos del catálogo
-                            </div>
+                            <label class="ct-stock-search">
+                                <x-heroicon-o-magnifying-glass aria-hidden="true" />
+                                <span class="sr-only">Buscar productos por nombre o SKU</span>
+                                <input type="search" wire:model.live.debounce.300ms="buscar" placeholder="Buscar productos" />
+                            </label>
                         </div>
 
-                        @if ($products->isEmpty())
-                            <div class="rounded-xl border border-dashed border-[#DCE0D5] p-8 text-center">
-                                <p class="text-sm text-gray-600">El catálogo no tiene productos cargados aún.</p>
-                                <p class="mt-1 text-xs text-gray-500">Usa el botón superior <strong>«Cargar inventario inicial (50/20/50)»</strong> para registrar la apertura de 50 tarjetas Google, 20 acrílicos y 50 chips NFC (con 20 apartados para acrílicos).</p>
-                            </div>
-                        @else
-                            <div class="overflow-x-auto rounded-lg border border-[#DCE0D5]">
-                                <table class="w-full min-w-[760px] text-left text-sm divide-y divide-[#DCE0D5]">
-                                    <thead class="bg-[#F6F7F5] text-xs font-semibold uppercase tracking-wider text-[#596052]">
-                                        <tr>
-                                            <th class="py-3 px-3">Artículo / SKU</th>
-                                            <th class="py-3 px-3">Tipo</th>
-                                            <th class="py-3 px-3 text-right">Existencia física</th>
-                                            <th class="py-3 px-3 text-right">Reservado pedidos</th>
-                                            <th class="py-3 px-3 text-right">Apartado producción</th>
-                                            <th class="py-3 px-3 text-right">Disponible libre</th>
-                                            <th class="py-3 px-3 text-right">Precio sugerido</th>
-                                            <th class="py-3 px-3 text-center">Alerta</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody class="divide-y divide-[#DCE0D5] bg-white">
-                                        @foreach ($products as $prod)
-                                            @php
-                                                $free = max(0, $prod->existencia - $prod->reservado_pedidos - $prod->reservado_produccion);
-                                                $isLow = $prod->minimo > 0 && $free <= $prod->minimo;
-                                            @endphp
-                                            <tr class="hover:bg-[#F6F7F5]/50 transition-colors">
-                                                <td class="py-3 px-3">
-                                                    <span class="font-semibold text-[#101010]">{{ $prod->nombre }}</span>
-                                                    <span class="block text-xs font-mono text-[#596052]">{{ $prod->sku }}</span>
-                                                </td>
-                                                <td class="py-3 px-3">
-                                                    @if ($prod->tipo === 'terminado')
-                                                        <span class="inline-flex items-center rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-800">Terminado</span>
-                                                    @else
-                                                        <span class="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">Insumo</span>
-                                                    @endif
-                                                </td>
-                                                <td class="py-3 px-3 text-right font-medium text-[#101010]">{{ $prod->existencia }}</td>
-                                                <td class="py-3 px-3 text-right text-gray-600">{{ $prod->reservado_pedidos }}</td>
-                                                <td class="py-3 px-3 text-right text-blue-700 font-medium">
-                                                    @if ($prod->sku === 'NFC-CHIP' && $prod->reservado_produccion > 0)
-                                                        {{ $prod->reservado_produccion }} <span class="text-xs text-blue-600">(para acrílicos)</span>
-                                                    @else
-                                                        {{ $prod->reservado_produccion }}
-                                                    @endif
-                                                </td>
-                                                <td class="py-3 px-3 text-right">
-                                                    <span class="inline-block rounded px-2 py-0.5 font-bold {{ $free > 0 ? 'bg-emerald-50 text-emerald-800' : 'bg-gray-100 text-gray-500' }}">
-                                                        {{ $free }}
-                                                    </span>
-                                                </td>
-                                                <td class="py-3 px-3 text-right">
-                                                    @if ($prod->precio_clp !== null)
-                                                        <span class="font-semibold text-[#101010]">${{ number_format($prod->precio_clp, 0, ',', '.') }}</span>
-                                                    @else
-                                                        <span class="text-xs text-amber-700 bg-amber-50 px-2 py-0.5 rounded font-medium">Pendiente</span>
-                                                    @endif
-                                                </td>
-                                                <td class="py-3 px-3 text-center">
-                                                    @if ($isLow)
-                                                        <span class="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">⚠️ Reponer</span>
-                                                    @else
-                                                        <span class="text-xs text-gray-400">Normal</span>
-                                                    @endif
-                                                </td>
-                                            </tr>
-                                        @endforeach
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            <div class="rounded-lg bg-[#EEF1E8] p-3 text-xs text-[#596052]">
-                                💡 <strong>Regla de negocio:</strong> Apartar 20 chips NFC para acrílicos no reduce el stock físico (sigue en 50), pero sí reserva su uso para producción, dejando exactamente 30 chips libres para venta directa individual.
-                            </div>
-                        @endif
-                    </div>
+                        <ul class="ct-stock-products" aria-label="Productos" wire:loading.class="opacity-60" wire:target="buscar">
+                            @forelse ($products as $prod)
+                                @php
+                                    $free = max(0, $prod->existencia - $prod->reservado_pedidos - $prod->reservado_produccion);
+                                    $isLow = $prod->minimo > 0 && $free <= $prod->minimo;
+                                    $photo = match ($prod->sku) {
+                                        'TAR-GOOGLE' => 'tarjeta-google.png',
+                                        'NFC-CHIP' => 'chip-nfc.jpg',
+                                        'ACR-BASE', 'ACR-PERSONALIZADO' => 'acrilico.png',
+                                        default => null,
+                                    };
+                                @endphp
+                                <li wire:key="stock-product-{{ $prod->id }}" class="ct-stock-product">
+                                    <details class="ct-stock-details">
+                                        <summary class="ct-stock-product-row">
+                                            <div class="ct-stock-photo">
+                                                @if ($photo)
+                                                    <img src="{{ asset('images/inventory/'.$photo) }}" alt="{{ $prod->nombre }}" width="112" height="112" loading="lazy" />
+                                                @else
+                                                    <x-heroicon-o-cube aria-hidden="true" />
+                                                @endif
+                                            </div>
+                                            <div class="ct-stock-product-info">
+                                                <h3>{{ $prod->nombre }}</h3>
+                                                <p class="ct-stock-description">{{ $prod->tipo === 'terminado' ? 'Producto terminado' : 'Insumo' }} · {{ $prod->sku }}</p>
+                                                <p class="ct-stock-price">{{ $prod->precio_clp !== null ? '$'.number_format($prod->precio_clp, 0, ',', '.').' CLP' : 'Precio por definir' }}</p>
+                                            </div>
+                                            <div class="ct-stock-availability">
+                                                <span @class(['ct-stock-quantity', 'is-empty' => $free === 0, 'is-low' => $free > 0 && $isLow])>{{ number_format($free, 0, ',', '.') }} <span>disponibles</span></span>
+                                                <span class="ct-stock-status">{{ $free === 0 ? 'Sin disponibilidad' : ($isLow ? 'Stock bajo' : ($prod->vendible ? 'Para venta' : 'Para producción')) }}</span>
+                                            </div>
+                                            <x-heroicon-o-chevron-right class="ct-stock-chevron" aria-hidden="true" />
+                                        </summary>
+                                        <div class="ct-stock-product-detail">
+                                            <dl>
+                                                <div><dt>Existencia física</dt><dd>{{ $prod->existencia }}</dd></div>
+                                                <div><dt>Reservado a pedidos</dt><dd>{{ $prod->reservado_pedidos }}</dd></div>
+                                                <div><dt>Apartado para producción</dt><dd>{{ $prod->reservado_produccion }}</dd></div>
+                                                <div><dt>Disponible</dt><dd>{{ $free }}</dd></div>
+                                            </dl>
+                                        </div>
+                                    </details>
+                                </li>
+                            @empty
+                                <li class="ct-stock-empty">
+                                    <x-heroicon-o-magnifying-glass aria-hidden="true" />
+                                    <h3>{{ trim($buscar) !== '' ? 'No encontramos productos' : 'Tu inventario aún está vacío' }}</h3>
+                                    <p>{{ trim($buscar) !== '' ? 'Prueba con otro nombre o código de producto.' : 'Los productos aparecerán aquí cuando estén registrados.' }}</p>
+                                </li>
+                            @endforelse
+                        </ul>
+                    </section>
                 @endif
 
                 <!-- ========================================== -->

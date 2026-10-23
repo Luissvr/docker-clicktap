@@ -2,14 +2,12 @@
 
 namespace App\Providers\Filament;
 
-use App\Filament\Pages\Cobros;
 use App\Filament\Pages\ConfiguracionPrecios;
 use App\Filament\Pages\Contabilidad;
 use App\Filament\Pages\Dashboard;
-use App\Filament\Pages\PlacasNfc;
 use App\Filament\Pages\PublicacionesSitio;
-use App\Filament\Pages\SolicitudesCambio;
 use App\Filament\Pages\StockTarjetas;
+use App\Filament\Pages\Ventas;
 use App\Filament\Resources\ClienteResource\Pages\ListClientes;
 use App\Filament\Resources\PaginaResource\Pages\ListPaginas;
 use App\Support\CatalogConnection;
@@ -40,7 +38,9 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->brandName('ClickTap')
-            ->brandLogo(asset('images/clicktap-horizontal.png'))
+            ->brandLogo(fn () => auth()->check()
+                ? view('filament.components.brand-logo')
+                : asset('images/clicktap-horizontal.png'))
             ->brandLogoHeight('34px')
             ->login()
             ->spa()
@@ -62,15 +62,12 @@ class AdminPanelProvider extends PanelProvider
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->pages([
                 Dashboard::class,
+                Ventas::class,
                 StockTarjetas::class,
                 Contabilidad::class,
-                PlacasNfc::class,
-                SolicitudesCambio::class,
-                Cobros::class,
                 PublicacionesSitio::class,
                 ConfiguracionPrecios::class,
             ])
-            ->navigationGroups(['Inicio', 'Contenido', 'Operación', 'Finanzas', 'Sistema'])
             ->renderHook(
                 PanelsRenderHook::TOPBAR_START,
                 fn () => view('filament.components.header-title')
@@ -90,7 +87,7 @@ class AdminPanelProvider extends PanelProvider
                 scopes: ListPaginas::class
             )
             ->renderHook(
-                PanelsRenderHook::SIDEBAR_FOOTER,
+                PanelsRenderHook::SIDEBAR_NAV_START,
                 fn (): string => CatalogConnection::enabled() && auth()->check()
                     ? Blade::render('@livewire("catalog-sync-status")')
                     : ''

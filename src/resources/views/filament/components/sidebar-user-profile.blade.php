@@ -13,6 +13,19 @@
 @endphp
 
 <div class="fi-sidebar-footer border-t border-[#242820] bg-[#101010] p-2.5">
+    <button
+        type="button"
+        class="ct-sidebar-toggle"
+        x-data="{}"
+        x-on:click="$store.sidebar.isOpen ? $store.sidebar.close() : $store.sidebar.open()"
+        x-bind:aria-expanded="$store.sidebar.isOpen.toString()"
+        x-bind:aria-label="$store.sidebar.isOpen ? 'Contraer menú' : 'Desplegar menú'"
+        x-bind:title="$store.sidebar.isOpen ? 'Contraer menú' : 'Desplegar menú'"
+    >
+        <x-filament::icon icon="heroicon-o-chevron-double-left" class="ct-sidebar-toggle-icon" x-bind:class="{ 'rotate-180': ! $store.sidebar.isOpen }" />
+        <span x-show="$store.sidebar.isOpen">Contraer menú</span>
+    </button>
+
     <x-filament::dropdown placement="top-start" teleport class="w-full">
         <x-slot name="trigger">
             <button
