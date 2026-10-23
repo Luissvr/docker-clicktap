@@ -16,7 +16,11 @@ class User extends Authenticatable implements FilamentUser
 
     public function getConnectionName(): ?string
     {
-        return $this->connection === 'catalog' ? config('database.default') : parent::getConnectionName();
+        if ($this->connection === 'catalog') {
+            return config('database.default');
+        }
+
+        return $this->connection ?? config('auth.database_connection', config('database.default'));
     }
 
     protected $attributes = [

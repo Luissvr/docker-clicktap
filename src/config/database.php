@@ -56,7 +56,7 @@ return [
             'password' => env('LOCAL_DB_PASSWORD', 'clicktap_secret'),
             'charset' => 'utf8',
             'prefix' => '',
-            'search_path' => 'clicktap_cache',
+            'search_path' => env('LOCAL_DB_SCHEMA', 'public'),
             'sslmode' => 'disable',
         ],
 

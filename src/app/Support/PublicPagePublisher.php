@@ -66,7 +66,7 @@ final class PublicPagePublisher
                 'tree' => $entries,
             ])->throw()->json('sha');
             $commit = $client->post($baseUrl.'/git/commits', [
-                'message' => 'chore: publicar paginas desde clicktap',
+                'message' => $this->commitMessage($pagina),
                 'tree' => $tree,
                 'parents' => [$head],
             ])->throw()->json('sha');
@@ -93,6 +93,18 @@ final class PublicPagePublisher
         }
     }
 
+    private function commitMessage(Pagina $pagina): string
+    {
+        $name = trim((string) $pagina->nombre_publico) ?: $pagina->slug;
+        $name = Str::of($name)
+            ->replace(["\r", "\n", '"'], '')
+            ->squish()
+            ->limit(80, '')
+            ->toString();
+        $action = $pagina->publicacion_commit ? 'actualizar' : 'añadir';
+
+        return "{$action} página \"{$name}\" ({$pagina->slug})";
+    }
     /** @return array{0: array<string, mixed>, 1: list<array{path: string, contents: string}>} */
     private function payloadAndLogos(): array
     {
