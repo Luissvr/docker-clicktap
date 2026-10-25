@@ -66,11 +66,10 @@
         body.theme-comercio {
             padding: 12px 12px 20px;
             text-align: left;
-            background: radial-gradient(circle at 50% -4%, rgba(61, 122, 173, .27), transparent 28rem), linear-gradient(180deg, #0b1b2d, #081321 36rem);
-            background-color: #081321;
-            color: #f6f9fd;
+            background: var(--background);
+            color: var(--text);
         }
-        html:has(body.theme-comercio) { background: #081321; }
+        html:has(body.theme-comercio) { background: var(--background); }
         .theme-comercio .content { max-width: 496px; text-align: left; }
         .theme-comercio .logo-wrap { width: 100%; min-height: 0; margin: 0 auto 12px; }
         .theme-comercio .logo-img:not(.logo-img--round):not(.logo-img--rounded) {
@@ -82,16 +81,16 @@
             border-radius: 16px; background: #fff; padding: 7px; object-fit: contain;
         }
         .theme-comercio h1 {
-            color: #f7f9fc; font-family: "Aptos Display", "Segoe UI Variable Display", "Segoe UI", sans-serif;
+            color: var(--text); font-family: "Aptos Display", "Segoe UI Variable Display", "Segoe UI", sans-serif;
             font-size: clamp(27px, 6.5vw, 34px); font-weight: 700; line-height: 1.13;
             letter-spacing: -.035em; text-wrap: balance; margin: 0 0 6px; text-align: center;
         }
         .theme-comercio h1::after {
             content: ''; display: block; width: 56px; height: 3px; margin: 8px auto 0;
-            border-radius: 999px; background: linear-gradient(90deg, #ee786e, #8bbbd9);
+            border-radius: 999px; background: var(--accent);
         }
         .theme-comercio .tagline {
-            margin: 0 auto 10px; color: #b9cadb; text-align: center; font-size: 15px;
+            margin: 0 auto 10px; color: var(--text); text-align: center; font-size: 15px;
             line-height: 1.45; overflow-wrap: anywhere;
         }
         .theme-comercio .details {
@@ -99,20 +98,18 @@
             align-items: start; margin: 10px 0; text-align: left;
         }
         .theme-comercio .detail-section { gap: 8px; min-width: 0; padding: 6px 3px; }
-        .theme-comercio .detail-icon { width: 19px; height: 19px; color: #ff8b7f; }
-        .theme-comercio .detail-content { min-width: 0; font-size: 13px; color: #f6f9fd; overflow-wrap: anywhere; }
-        .theme-comercio .detail-content h2 { margin: 0 0 5px; color: #ff8b7f; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+        .theme-comercio .detail-icon { width: 19px; height: 19px; color: var(--accent); }
+        .theme-comercio .detail-content { min-width: 0; font-size: 13px; color: var(--text); overflow-wrap: anywhere; }
+        .theme-comercio .detail-content h2 { margin: 0 0 5px; color: var(--accent); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
         .theme-comercio .detail-content p { margin: 0; white-space: pre-line; }
         .theme-comercio .detail-content a { display: block; color: inherit; text-decoration: none; overflow-wrap: anywhere; }
         .theme-comercio .detail-schedule { grid-column: 1 / -1; }
         .theme-comercio .links { gap: 8px; margin: 10px auto 0; width: 100%; }
-        .theme-comercio .link-button { display: flex; justify-content: center; gap: 10px; min-height: 48px; padding: 10px 15px; border: 1px solid rgba(139, 187, 217, .48); border-radius: 14px; background: linear-gradient(115deg, rgba(244, 107, 94, .14), rgba(139, 187, 217, .2)), #122a43; color: #f6f9fd; font-size: 16px; }
-        .theme-comercio .link-button:hover { border-color: rgba(244, 139, 127, .78); background: linear-gradient(115deg, rgba(244, 107, 94, .24), rgba(139, 187, 217, .28)), #1b3b59; }
-        .theme-comercio .link-button-whatsapp { border-color: rgba(37, 211, 102, .48); background: linear-gradient(135deg, rgba(37, 211, 102, .2), #122a43 86%); }
-        .theme-comercio .link-button-whatsapp:hover { border-color: rgba(37, 211, 102, .72); background: linear-gradient(135deg, rgba(37, 211, 102, .29), #173851 86%); }
-        .theme-comercio .link-button.link-button-review { position: relative; min-height: 48px; padding-inline: 2.8rem; border-color: rgba(251, 188, 4, .58); background: linear-gradient(115deg, rgba(251, 188, 4, .2), rgba(244, 107, 94, .12)), #122a43; font-size: 14px; }
+        .theme-comercio .link-button { display: flex; justify-content: center; gap: 10px; min-height: 48px; padding: 10px 15px; border: 1px solid var(--button); border-radius: 14px; background: var(--button); color: var(--button-text); font-size: 16px; }
+        .theme-comercio .link-button:hover { box-shadow: 0 0 0 2px var(--background), 0 0 0 3px var(--accent); }
+        .theme-comercio .link-button.link-button-review { position: relative; min-height: 48px; padding-inline: 2.8rem; font-size: 14px; }
         .theme-comercio .link-button-review .link-icon { position: absolute; top: 50%; left: 1rem; transform: translateY(-50%); }
-        .theme-comercio .link-button-review .link-icon svg { color: #facc15; }
+        .theme-comercio .link-button-review .link-icon svg { color: var(--button-text); }
         .theme-comercio .link-label { width: auto; padding: 0; line-height: 1.25; white-space: normal; overflow: visible; text-overflow: clip; }
         .theme-comercio .transfer-logo { width: 32px; height: 32px; object-fit: contain; border-radius: 4px; background: #fff; }
         .theme-comercio .footer-brand { display: none; }

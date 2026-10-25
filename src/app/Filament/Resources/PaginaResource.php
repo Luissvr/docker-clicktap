@@ -6,6 +6,7 @@ use App\Filament\Resources\PaginaResource\Pages;
 use App\Models\Pagina;
 use App\Support\LinkTypeHelper;
 use App\Support\LogoPalette;
+use App\Support\PageAppearance;
 use App\Support\PageDescription;
 use App\Support\PublicationQueue;
 use App\Support\TypographyHelper;
@@ -220,21 +221,41 @@ class PaginaResource extends Resource
                                     ->extraAlpineAttributes(['x-ignore' => ''])
                                     ->label('Fondo')
                                     ->default('#ffffff')
-                                    ->helperText('El texto se ajusta automáticamente para mantener contraste.'),
+                                    ->live(debounce: 500)
+                                    ->afterStateUpdated(function (Forms\Get $get, Forms\Set $set, ?string $state): void {
+                                        if (! is_string($state) || preg_match('/^#[0-9a-fA-F]{6}$/', $state) !== 1) {
+                                            return;
+                                        }
+
+                                        $palette = PageAppearance::resolve([
+                                            'color_fondo' => $state,
+                                            'color_texto' => $get('color_texto'),
+                                            'color_boton' => $get('color_boton'),
+                                            'color_texto_boton' => $get('color_texto_boton'),
+                                        ]);
+
+                                        foreach (['color_texto', 'color_boton', 'color_texto_boton'] as $field) {
+                                            $set($field, $palette[$field]);
+                                        }
+                                    })
+                                    ->helperText('Al cambiar el fondo, los textos y botones se ajustan para mantener contraste.'),
                                 Forms\Components\ColorPicker::make('color_texto')
                                     ->extraAlpineAttributes(['x-ignore' => ''])
                                     ->label('Texto')
                                     ->default('#000000')
+                                    ->live(debounce: 500)
                                     ->helperText('Se recomienda un contraste mínimo de 4,5:1.'),
                                 Forms\Components\ColorPicker::make('color_boton')
                                     ->extraAlpineAttributes(['x-ignore' => ''])
                                     ->label('Botones')
                                     ->default('#111827')
+                                    ->live(debounce: 500)
                                     ->helperText('Los enlaces se muestran con este color de fondo.'),
                                 Forms\Components\ColorPicker::make('color_texto_boton')
                                     ->extraAlpineAttributes(['x-ignore' => ''])
                                     ->label('Texto de botones')
                                     ->default('#ffffff')
+                                    ->live(debounce: 500)
                                     ->helperText('Se corrige automáticamente si no contrasta con el botón.'),
                             ])->columns(['default' => 1, 'sm' => 2, 'lg' => 3]),
 
