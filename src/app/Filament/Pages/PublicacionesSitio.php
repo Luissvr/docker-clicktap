@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Support\PublicationQueue;
 use Filament\Pages\Page;
 
 class PublicacionesSitio extends Page
@@ -16,5 +17,10 @@ class PublicacionesSitio extends Page
 
     protected static ?int $navigationSort = 8;
 
-    protected static string $view = 'filament.pages.placeholder';
+    protected static string $view = 'filament.pages.publicaciones-sitio';
+
+    public function getViewData(): array
+    {
+        return app(PublicationQueue::class)->status();
+    }
 }

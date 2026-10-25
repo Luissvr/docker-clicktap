@@ -11,6 +11,7 @@ use App\Support\BusinessLedger;
 use App\Support\UsesCatalogTransactions;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Database\Eloquent\Model;
+use Livewire\Attributes\Locked;
 
 class CreatePagina extends CreateRecord
 {
@@ -25,6 +26,9 @@ class CreatePagina extends CreateRecord
 
     protected static string $resource = PaginaResource::class;
 
+    protected ?bool $hasUnsavedDataChangesAlert = true;
+
+    #[Locked]
     public ?string $ventaId = null;
 
     public function mount(): void

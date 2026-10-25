@@ -17,6 +17,7 @@ abstract class TestCase extends BaseTestCase
         $this->setEnvironment('DB_URL', '');
         $this->setEnvironment('CLICKTAP_LOCAL_CATALOG', 'false');
         $this->setEnvironment('CLICKTAP_SYNC_CACHE_STORE', 'array');
+        $this->setEnvironment('CLICKTAP_PUBLICATION_STORE', 'array');
         $this->setEnvironment('CLICKTAP_MEDIA_DISK', 'public');
 
         $app = parent::createApplication();

@@ -19,6 +19,7 @@ class LocalCatalogSyncTest extends TestCase
 
         $config = config('database.connections.local');
         $config['database'] = 'clicktap_test';
+        $config['search_path'] = 'clicktap_cache';
         config(['database.connections.local' => $config]);
         config(['database.connections.supabase' => array_merge($config, ['search_path' => 'sync_test_source'])]);
         DB::purge('local');

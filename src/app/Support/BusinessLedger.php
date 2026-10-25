@@ -5,7 +5,9 @@ namespace App\Support;
 use Illuminate\Database\Connection;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class BusinessLedger
@@ -39,6 +41,62 @@ class BusinessLedger
     {
         $this->connection()->table('inventario_productos')->where('id', $productId)
             ->update(['precio_clp' => $price, 'updated_at' => now()]);
+        $this->invalidateReads();
+    }
+
+    public function createProduct(array $data): string
+    {
+        $data['sku'] = Str::upper(trim($data['sku'] ?? ''));
+        $data['nombre'] = trim($data['nombre'] ?? '');
+        $data = Validator::make($data, [
+            'sku' => ['required', 'string', 'max:80', 'regex:/^[A-Z0-9][A-Z0-9._-]*$/', Rule::unique($this->connection()->getName().'.inventario_productos', 'sku')],
+            'nombre' => ['required', 'string', 'max:255'],
+            'tipo' => ['required', Rule::in(['insumo', 'terminado'])],
+            'vendible' => ['required', 'boolean'],
+            'minimo' => ['required', 'integer', 'min:0', 'max:2147483647'],
+            'precio_clp' => ['nullable', 'integer', 'min:0', 'max:2147483647'],
+        ])->validate();
+
+        $id = (string) Str::uuid();
+        $this->connection()->table('inventario_productos')->insert(array_merge($data, [
+            'id' => $id, 'created_at' => now(), 'updated_at' => now(),
+        ]));
+        $this->invalidateReads();
+
+        return $id;
+    }
+
+    public function invalidateReads(): void
+    {
+        app(InventoryReadCache::class)->invalidate($this->connection());
+    }
+
+    public function purchases(string $search = '', int $page = 1): array
+    {
+        return app(InventoryReadCache::class)->remember($this->connection(), 'purchases:'.json_encode([$search, $page]), function () use ($search, $page): array {
+            $query = $this->connection()->table('inventario_compras as c')
+                ->join('inventario_productos as i', 'i.id', '=', 'c.producto_id')
+                ->leftJoin('users as u', 'u.id', '=', 'c.registrado_por')
+                ->select('c.*', 'i.nombre as producto_nombre', 'i.sku as producto_sku', 'u.name as responsable');
+            $this->searchQuery($query, ['i.nombre', 'i.sku', 'c.proveedor', 'c.documento'], $search);
+            $rows = $query->orderByDesc('c.fecha')->orderByDesc('c.created_at')->orderBy('c.id')
+                ->offset((max(1, $page) - 1) * 25)->limit(26)->get();
+
+            return ['purchases' => $rows->take(25), 'hasMore' => $rows->count() > 25, 'readAt' => now()->toIso8601String()];
+        });
+    }
+
+    private function searchQuery(Builder $query, array $columns, string $term): void
+    {
+        $term = mb_strtolower(trim($term));
+        if ($term === '') {
+            return;
+        }
+        $query->where(function (Builder $query) use ($columns, $term): void {
+            foreach ($columns as $column) {
+                $query->orWhereRaw('LOWER('.$column.') LIKE ?', ['%'.$term.'%']);
+            }
+        });
     }
 
     public function receive(string $productId, int $quantity, ?int $totalCost, int $paid, ?string $supplier, ?string $document, string $date, string $key): string
@@ -360,18 +418,39 @@ class BusinessLedger
         }, 3);
     }
 
-    public function snapshot(string $section = 'all'): array
+    public function snapshot(string $section = 'all', array $filters = [], int $page = 1): array
+    {
+        return app(InventoryReadCache::class)->remember($this->connection(), 'snapshot:'.json_encode([$section, $filters, $page]),
+            fn (): array => $this->readSnapshot($section, $filters, $page));
+    }
+
+    private function readSnapshot(string $section, array $filters, int $page): array
     {
         $db = $this->connection();
         $products = $db->table('inventario_productos')->orderBy('sku')->get();
         $orders = collect();
+        $hasMore = false;
+        $term = (string) ($filters['buscar'] ?? '');
 
         if (in_array($section, ['all', 'pedidos'], true)) {
-            $orders = $db->table('inventario_pedidos as p')->join('inventario_productos as i', 'i.id', '=', 'p.producto_id')
+            $query = $db->table('inventario_pedidos as p')->join('inventario_productos as i', 'i.id', '=', 'p.producto_id')
                 ->leftJoinSub($this->orderPayments(), 'payments', 'payments.pedido_id', '=', 'p.id')
                 ->select('p.*', 'i.nombre as producto_nombre', 'i.sku as producto_sku')
-                ->selectRaw('COALESCE(payments.pagado, 0) AS pagado_clp')
-                ->orderByDesc('p.created_at')->limit(100)->get()
+                ->selectRaw('COALESCE(payments.pagado, 0) AS pagado_clp');
+            $this->searchQuery($query, ['i.nombre', 'i.sku', 'p.cliente', 'p.canal', 'p.referencia_externa'], $term);
+            if (($filters['estado'] ?? 'todos') !== 'todos') {
+                $query->where('p.estado', $filters['estado']);
+            }
+            $payment = $filters['estadoPago'] ?? 'todos';
+            if ($payment !== 'todos') {
+                $query->where('p.estado', '!=', 'cancelado');
+                match ($payment) {
+                    'pagado' => $query->whereRaw('COALESCE(payments.pagado, 0) >= p.cantidad * p.precio_unitario_clp AND p.cantidad * p.precio_unitario_clp > 0'),
+                    'parcial' => $query->whereRaw('COALESCE(payments.pagado, 0) > 0 AND COALESCE(payments.pagado, 0) < p.cantidad * p.precio_unitario_clp'),
+                    default => $query->whereRaw('COALESCE(payments.pagado, 0) = 0'),
+                };
+            }
+            $orders = $query->orderByDesc('p.created_at')->orderBy('p.id')->offset((max(1, $page) - 1) * 25)->limit(26)->get()
                 ->map(function ($order) {
                     $paid = (int) $order->pagado_clp;
                     $total = $order->cantidad * $order->precio_unitario_clp;
@@ -390,6 +469,8 @@ class BusinessLedger
 
                     return $order;
                 });
+            $hasMore = $orders->count() > 25;
+            $orders = $orders->take(25);
         }
 
         $bySku = $products->keyBy('sku');
@@ -398,10 +479,11 @@ class BusinessLedger
         $chip = $bySku->get('NFC-CHIP');
         $finished = $bySku->get('ACR-PERSONALIZADO');
 
-        $deliveredOrders = $orders->where('estado', 'entregado');
-        $deliveredCards = $deliveredOrders->where('producto_sku', 'TAR-GOOGLE')->sum('cantidad');
-        $deliveredChips = $deliveredOrders->where('producto_sku', 'NFC-CHIP')->sum('cantidad');
-        $deliveredAcrylics = $deliveredOrders->where('producto_sku', 'ACR-PERSONALIZADO')->sum('cantidad');
+        $delivered = $db->table('inventario_pedidos as p')->join('inventario_productos as i', 'i.id', '=', 'p.producto_id')
+            ->where('p.estado', 'entregado')->groupBy('i.sku')->selectRaw('i.sku, SUM(p.cantidad) AS cantidad')->pluck('cantidad', 'sku');
+        $deliveredCards = (int) $delivered->get('TAR-GOOGLE', 0);
+        $deliveredChips = (int) $delivered->get('NFC-CHIP', 0);
+        $deliveredAcrylics = (int) $delivered->get('ACR-PERSONALIZADO', 0);
 
         $productionMovements = collect();
         if (in_array($section, ['all', 'produccion'], true)) {
@@ -414,12 +496,26 @@ class BusinessLedger
 
         $movements = collect();
         if (in_array($section, ['all', 'historial'], true)) {
-            $movements = $db->table('inventario_movimientos as m')->join('inventario_productos as i', 'i.id', '=', 'm.producto_id')
-                ->select('m.*', 'i.nombre as producto_nombre', 'i.sku as producto_sku')->orderByDesc('m.created_at')->limit(100)->get();
+            $query = $db->table('inventario_movimientos as m')->join('inventario_productos as i', 'i.id', '=', 'm.producto_id')
+                ->select('m.*', 'i.nombre as producto_nombre', 'i.sku as producto_sku');
+            $this->searchQuery($query, ['i.nombre', 'i.sku', 'm.tipo', 'm.motivo'], $term);
+            if (($filters['historialTipo'] ?? 'todos') !== 'todos') {
+                $query->where('m.tipo', $filters['historialTipo']);
+            }
+            if (! empty($filters['historialDesde'])) {
+                $query->whereDate('m.created_at', '>=', $filters['historialDesde']);
+            }
+            $movements = $query->orderByDesc('m.created_at')->orderBy('m.id')->offset((max(1, $page) - 1) * 25)->limit(26)->get();
+            $hasMore = $movements->count() > 25;
+            $movements = $movements->take(25);
         }
 
         return [
-            'products' => $products,
+            'products' => $section === 'inventario' && trim($term) !== ''
+                ? $products->filter(fn ($product): bool => str_contains(mb_strtolower($product->nombre.' '.$product->sku), mb_strtolower(trim($term))))
+                : $products,
+            'hasMore' => $hasMore,
+            'readAt' => now()->toIso8601String(),
             'orders' => $orders,
             'movements' => $movements,
             'breakdown' => [
@@ -443,7 +539,7 @@ class BusinessLedger
                     'capacidad_acrilicos' => ($base && $chip) ? min(max(0, $base->existencia - $base->reservado_pedidos), $chip->reservado_produccion) : 0,
                 ],
                 'vendido' => [
-                    'total' => $deliveredOrders->sum('cantidad'),
+                    'total' => (int) $delivered->sum(),
                     'cards' => $deliveredCards,
                     'chips' => $deliveredChips,
                     'finished' => $deliveredAcrylics,
@@ -624,6 +720,7 @@ class BusinessLedger
             'existencia' => $onHand, 'reservado_pedidos' => $heldOrders,
             'reservado_produccion' => $heldProduction, 'updated_at' => now(),
         ]);
+        $this->invalidateReads();
     }
 
     private function lot(string $productId, ?string $purchaseId, int $quantity, ?int $cost): void
@@ -687,6 +784,7 @@ class BusinessLedger
             'clave_operacion' => $key, 'registrado_por' => auth()->id(),
             'created_at' => now(), 'updated_at' => now(),
         ]);
+        $this->invalidateReads();
     }
 
     private function paidForOrder(string $orderId): int

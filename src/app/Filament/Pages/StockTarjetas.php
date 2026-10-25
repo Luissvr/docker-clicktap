@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Support\BusinessLedger;
+use App\Support\InventoryReadCache;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Hidden;
@@ -13,6 +14,9 @@ use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
+use Livewire\Attributes\On;
+use Livewire\Attributes\Url;
 
 class StockTarjetas extends Page
 {
@@ -28,57 +32,150 @@ class StockTarjetas extends Page
 
     protected ?string $maxContentWidth = 'full';
 
+    #[Url(as: 'vista')]
     public string $activeTab = 'inventario';
 
+    #[Url]
     public string $buscar = '';
 
+    #[Url]
     public string $estado = 'todos';
 
+    #[Url]
     public string $estadoPago = 'todos';
 
+    #[Url]
     public string $historialTipo = 'todos';
 
+    #[Url]
     public ?string $historialDesde = null;
+
+    #[Url(as: 'pagina')]
+    public int $stockPage = 1;
+
+    public bool $showPurchases = false;
+
+    public string $purchaseSearch = '';
+
+    public int $purchasePage = 1;
+
+    public function callMountedAction(array $arguments = []): mixed
+    {
+        try {
+            return parent::callMountedAction($arguments);
+        } catch (ValidationException $exception) {
+            $prefix = 'mountedActionsData.'.max(0, count($this->mountedActions) - 1).'.';
+            $messages = [];
+            foreach ($exception->errors() as $field => $errors) {
+                $messages[str_starts_with($field, 'mountedActionsData.') ? $field : $prefix.$field] = $errors;
+            }
+            throw ValidationException::withMessages($messages);
+        } catch (\PDOException $exception) {
+            report($exception);
+            Notification::make()->danger()->persistent()->title('No se pudo confirmar la operación')
+                ->body('Los datos siguen en el formulario. Comprueba el historial antes de reintentar para evitar duplicados.')->send();
+
+            return null;
+        }
+    }
+
+    public function mount(): void
+    {
+        $saved = session('stock-navigation', []);
+        foreach (['activeTab' => 'vista', 'buscar' => 'buscar', 'estado' => 'estado', 'estadoPago' => 'estadoPago', 'historialTipo' => 'historialTipo', 'historialDesde' => 'historialDesde', 'stockPage' => 'pagina'] as $property => $query) {
+            if (! request()->has($query) && array_key_exists($property, $saved)) {
+                $this->{$property} = $saved[$property];
+            }
+        }
+    }
 
     public function getViewData(): array
     {
-        $data = app(BusinessLedger::class)->snapshot($this->activeTab);
-        $term = mb_strtolower(trim($this->buscar));
+        $this->validate(['activeTab' => 'in:inventario,pedidos,produccion,historial', 'historialDesde' => 'nullable|date', 'stockPage' => 'integer|min:1|max:100000']);
 
-        if ($term !== '') {
-            $data['products'] = $data['products']->filter(fn ($row): bool => str_contains(mb_strtolower($row->nombre.' '.$row->sku), $term));
-            $data['orders'] = $data['orders']->filter(fn ($row): bool => str_contains(mb_strtolower($row->producto_nombre.' '.($row->cliente ?? '').' '.$row->canal.' '.($row->referencia_externa ?? '')), $term));
-            $data['movements'] = $data['movements']->filter(fn ($row): bool => str_contains(mb_strtolower($row->producto_nombre.' '.$row->tipo.' '.($row->motivo ?? '')), $term));
-        }
-
-        if ($this->estado !== 'todos') {
-            $data['orders'] = $data['orders']->filter(fn ($row): bool => $row->estado === $this->estado);
-        }
-
-        if ($this->estadoPago !== 'todos') {
-            $data['orders'] = $data['orders']->filter(fn ($row): bool => $row->estado_pago === $this->estadoPago);
-        }
-
-        if ($this->historialTipo !== 'todos') {
-            $data['movements'] = $data['movements']->filter(fn ($row): bool => $row->tipo === $this->historialTipo);
-        }
-
-        if ($this->historialDesde) {
-            $data['movements'] = $data['movements']->filter(fn ($row): bool => substr($row->created_at, 0, 10) >= $this->historialDesde);
-        }
-
-        return $data;
+        return app(BusinessLedger::class)->snapshot($this->activeTab, [
+            'buscar' => $this->buscar, 'estado' => $this->estado, 'estadoPago' => $this->estadoPago,
+            'historialTipo' => $this->historialTipo, 'historialDesde' => $this->historialDesde,
+        ], $this->stockPage) + [
+            'purchaseHistory' => $this->showPurchases ? app(BusinessLedger::class)->purchases($this->purchaseSearch, $this->purchasePage) : null,
+        ];
     }
 
-    public function updatedActiveTab(): void
+    public function updated(string $property): void
     {
-        $this->buscar = '';
+        if (in_array($property, ['activeTab', 'buscar', 'estado', 'estadoPago', 'historialTipo', 'historialDesde'], true)) {
+            $this->stockPage = 1;
+        }
+        if ($property === 'purchaseSearch') {
+            $this->purchasePage = 1;
+        }
+        if (in_array($property, ['activeTab', 'buscar', 'estado', 'estadoPago', 'historialTipo', 'historialDesde', 'stockPage'], true)) {
+            session()->put('stock-navigation', [
+                'activeTab' => $this->activeTab, 'buscar' => $this->buscar, 'estado' => $this->estado,
+                'estadoPago' => $this->estadoPago, 'historialTipo' => $this->historialTipo,
+                'historialDesde' => $this->historialDesde, 'stockPage' => $this->stockPage,
+            ]);
+        }
+    }
+
+    public function refreshStock(): void
+    {
+        app(BusinessLedger::class)->invalidateReads();
+    }
+
+    public function openPurchases(): void
+    {
+        $this->showPurchases = true;
+        $this->dispatch('open-modal', id: 'purchase-history');
+    }
+
+    #[On('close-modal')]
+    public function closePurchases(?string $id = null): void
+    {
+        if ($id === 'purchase-history') {
+            $this->showPurchases = false;
+        }
+    }
+
+    private function productForm(): array
+    {
+        return [
+            TextInput::make('nombre')->label('Nombre del producto')->required()->maxLength(255),
+            TextInput::make('sku')->label('SKU / código único')->required()->maxLength(80)->regex('/^[a-zA-Z0-9][a-zA-Z0-9._-]*$/'),
+            Select::make('tipo')->label('Tipo')->options(['terminado' => 'Producto terminado', 'insumo' => 'Insumo'])->default('terminado')->native()->required(),
+            Toggle::make('vendible')->label('Disponible para vender')->default(true),
+            TextInput::make('precio_clp')->label('Precio de venta CLP')->numeric()->integer()->minValue(0)->maxValue(2147483647),
+            TextInput::make('minimo')->label('Avisar al llegar a estas unidades')->numeric()->integer()->minValue(0)->maxValue(2147483647)->default(0)->required(),
+        ];
+    }
+
+    public function productoAction(): Action
+    {
+        return Action::make('producto')->label('Añadir producto')->modalDescription('Crea el producto y después registra una compra para ingresar sus existencias.')
+            ->form($this->productForm())->action(function (array $data): void {
+                app(BusinessLedger::class)->createProduct($data);
+                Notification::make()->success()->title('Producto creado')->send();
+            });
+    }
+
+    public function pagarCompraAction(): Action
+    {
+        return Action::make('pagarCompra')->label('Registrar pago de compra')->form([
+            TextInput::make('monto_clp')->label('Importe pagado CLP')->numeric()->integer()->minValue(1)->required(),
+            DatePicker::make('fecha')->label('Fecha')->default(now('America/Santiago')->toDateString())->required(),
+            Hidden::make('clave_operacion')->default(fn (): string => (string) Str::uuid()),
+        ])->action(function (array $data, array $arguments): void {
+            app(BusinessLedger::class)->payPurchase($arguments['compra'], (int) $data['monto_clp'], $data['fecha'], $data['clave_operacion']);
+            Notification::make()->success()->title('Pago registrado en caja')->send();
+        });
     }
 
     public function entradaAction(): Action
     {
         return Action::make('entrada')->label('Registrar compra / entrada')->form([
-            Select::make('producto_id')->label('Producto')->options(fn (): array => $this->productOptions())->required()->searchable(),
+            Select::make('producto_id')->label('Producto')->options(fn (): array => $this->productOptions())->required()->searchable()
+                ->createOptionForm($this->productForm())
+                ->createOptionUsing(fn (array $data): string => app(BusinessLedger::class)->createProduct($data)),
             TextInput::make('cantidad')->numeric()->integer()->minValue(1)->required(),
             TextInput::make('costo_total_clp')->label('Costo total CLP')->helperText('Déjalo vacío si todavía no conoces el costo.')->numeric()->integer()->minValue(0),
             TextInput::make('pagado_clp')->label('Pagado CLP')->numeric()->integer()->minValue(0)->default(0)->required(),
@@ -110,10 +207,13 @@ class StockTarjetas extends Page
             TextInput::make('abono_inicial_clp')->label('Abono inicial recibido CLP')->numeric()->integer()->minValue(0)->default(0)->helperText('Si el cliente paga un anticipo al reservar, se registra automáticamente en caja.'),
             Hidden::make('clave_operacion')->default(fn (): string => (string) Str::uuid()),
         ])->action(function (array $data): void {
-            $orderId = app(BusinessLedger::class)->reserveOrder($data['producto_id'], (int) $data['cantidad'], (int) $data['precio_unitario_clp'], $data['cliente'] ?? null, $data['canal'], $data['referencia_externa'] ?? null, $data['reservado_hasta'] ?? null, $data['clave_operacion']);
-            if (! empty($data['abono_inicial_clp']) && (int) $data['abono_inicial_clp'] > 0) {
-                app(BusinessLedger::class)->orderPayment($orderId, (int) $data['abono_inicial_clp'], now('America/Santiago')->toDateString(), $data['clave_operacion'].':abono');
-            }
+            $ledger = app(BusinessLedger::class);
+            $ledger->connection()->transaction(function () use ($ledger, $data): void {
+                $orderId = $ledger->reserveOrder($data['producto_id'], (int) $data['cantidad'], (int) $data['precio_unitario_clp'], $data['cliente'] ?? null, $data['canal'], $data['referencia_externa'] ?? null, $data['reservado_hasta'] ?? null, $data['clave_operacion']);
+                if (! empty($data['abono_inicial_clp']) && (int) $data['abono_inicial_clp'] > 0) {
+                    $ledger->orderPayment($orderId, (int) $data['abono_inicial_clp'], now('America/Santiago')->toDateString(), $data['clave_operacion'].':abono');
+                }
+            });
             Notification::make()->success()->title('Pedido y reserva registrados')->send();
         });
     }
@@ -205,12 +305,13 @@ class StockTarjetas extends Page
 
     private function productOptions(bool $saleable = false): array
     {
-        $query = app(BusinessLedger::class)->connection()->table('inventario_productos')->where('activo', true);
-        if ($saleable) {
-            $query->where('vendible', true);
-        }
+        $connection = app(BusinessLedger::class)->connection();
 
-        return $query->orderBy('nombre')->pluck('nombre', 'id')->all();
+        return app(InventoryReadCache::class)->remember($connection, 'product-options:'.(int) $saleable, function () use ($connection, $saleable): array {
+            return $connection->table('inventario_productos')->where('activo', true)
+                ->when($saleable, fn ($query) => $query->where('vendible', true))
+                ->orderBy('nombre')->pluck('nombre', 'id')->all();
+        });
     }
 
     private function nullableInt(mixed $value): ?int

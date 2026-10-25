@@ -18,7 +18,7 @@ final class PublicPagePublisher
         try {
             return CatalogConnection::remoteReads(fn (): string => $this->publishFromRemote($pagina->fresh()));
         } finally {
-            CatalogConnection::refreshAfterWrite();
+            CatalogConnection::refreshAfterWrite($pagina);
         }
     }
 
@@ -105,11 +105,13 @@ final class PublicPagePublisher
 
         return "{$action} página \"{$name}\" ({$pagina->slug})";
     }
+
     /** @return array{0: array<string, mixed>, 1: list<array{path: string, contents: string}>} */
     private function payloadAndLogos(): array
     {
         $payload = $this->exporter->payload();
         $logos = [];
+        $disks = Pagina::query()->whereIn('slug', array_column($payload['pages'], 'slug'))->pluck('logo_disk', 'slug');
 
         foreach ($payload['pages'] as &$page) {
             $logo = $page['logo'] ?? null;
@@ -118,7 +120,7 @@ final class PublicPagePublisher
             }
 
             $source = ltrim(Str::after($logo, '/storage/'), '/');
-            $disk = Storage::disk(Pagina::where('slug', $page['slug'])->firstOrFail()->logo_disk);
+            $disk = Storage::disk($disks->get($page['slug']));
             if (! $disk->exists($source)) {
                 throw new RuntimeException("No se encontró el logo público: {$source}.");
             }
@@ -152,9 +154,10 @@ final class PublicPagePublisher
 
     private function blob(PendingRequest $client, string $baseUrl, string $contents): string
     {
-        return (string) $client->post($baseUrl.'/git/blobs', [
-            'content' => base64_encode($contents),
-            'encoding' => 'base64',
-        ])->throw()->json('sha');
+        return app(CatalogSyncState::class)->cache()->remember('github-blob:'.hash('sha256', $baseUrl.'|'.$contents), 3600,
+            fn (): string => (string) $client->post($baseUrl.'/git/blobs', [
+                'content' => base64_encode($contents),
+                'encoding' => 'base64',
+            ])->throw()->json('sha'));
     }
 }

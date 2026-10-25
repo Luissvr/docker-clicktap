@@ -5,6 +5,7 @@ namespace App\Support;
 use Closure;
 use Filament\Notifications\Notification;
 use Illuminate\Database\Connection;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Throwable;
 
@@ -53,7 +54,7 @@ class CatalogConnection
     {
         $result = self::connection()->transaction($callback);
         if (self::connection()->transactionLevel() === 0) {
-            self::refreshAfterWrite();
+            self::refreshAfterWrite($result instanceof Model ? $result : null);
         }
 
         return $result;
@@ -69,13 +70,18 @@ class CatalogConnection
         }
     }
 
-    public static function refreshAfterWrite(): void
+    public static function refreshAfterWrite(?Model $record = null): void
     {
         if (! self::enabled()) {
             return;
         }
+        if ($record === null) {
+            app(CatalogSyncState::class)->request();
+
+            return;
+        }
         try {
-            app(LocalCatalogSync::class)->sync(self::connection());
+            app(LocalCatalogSync::class)->syncRecord($record, self::connection());
         } catch (Throwable) {
             app(CatalogSyncState::class)->request();
             if (! app()->runningInConsole() || app()->runningUnitTests()) {

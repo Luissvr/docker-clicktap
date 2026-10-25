@@ -1,5 +1,19 @@
 <x-filament-panels::page>
     <div class="ct-stock">
+        <div class="ct-inventory-actions">
+            <x-filament::button icon="heroicon-o-plus" wire:click="mountAction('entrada')">Añadir compra</x-filament::button>
+            <x-filament::button color="gray" wire:click="mountAction('producto')">Añadir producto</x-filament::button>
+            <x-filament::button color="gray" icon="heroicon-o-clock" wire:click="openPurchases">Historial de compras</x-filament::button>
+            <x-filament::button color="gray" wire:click="mountAction('reservar')">Reservar</x-filament::button>
+            <x-filament::button color="gray" wire:click="mountAction('ajuste')">Ajustar inventario</x-filament::button>
+            <x-filament::button color="gray" wire:click="mountAction('precio')">Editar precio</x-filament::button>
+        </div>
+        <div class="ct-stock-freshness" aria-live="polite">
+            <span>Consultado {{ \Illuminate\Support\Carbon::parse($readAt)->timezone('America/Santiago')->format('H:i:s') }} · Las operaciones confirman el stock actual.</span>
+            <button type="button" wire:click="refreshStock" wire:loading.attr="disabled">Actualizar</button>
+            <span wire:loading role="status">Actualizando…</span>
+            <span wire:offline role="status">Sin conexión. Reconecta antes de registrar movimientos.</span>
+        </div>
         <nav class="ct-stock-nav" aria-label="Vistas de stock">
             @foreach (['inventario' => 'Inventario', 'pedidos' => 'Pedidos y reservas', 'produccion' => 'Producción', 'historial' => 'Historial'] as $tab => $label)
                 <button
@@ -23,7 +37,7 @@
                             <label class="ct-stock-search">
                                 <x-heroicon-o-magnifying-glass aria-hidden="true" />
                                 <span class="sr-only">Buscar productos por nombre o SKU</span>
-                                <input type="search" wire:model.live.debounce.300ms="buscar" placeholder="Buscar productos" />
+                                <input type="search" wire:model.live.debounce.500ms="buscar" placeholder="Buscar productos" />
                             </label>
                         </div>
 
@@ -90,15 +104,15 @@
                             <div class="w-full sm:max-w-xs">
                                 <input
                                     type="search"
-                                    wire:model.live.debounce.300ms="buscar"
+                                    wire:model.live.debounce.500ms="buscar"
                                     placeholder="Buscar pedido, cliente, canal..."
                                     class="w-full rounded-lg border-[#8C9681] text-sm focus:border-[#375500] focus:ring-[#375500]"
                                 >
                             </div>
-                            <div class="w-40">
+                            <div class="w-full sm:w-40">
                                 <x-filter-select model="estado" label="Estado del pedido" :options="['todos' => 'Pedido: Todos', 'reservado' => 'Reservado', 'entregado' => 'Entregado', 'cancelado' => 'Cancelado']" />
                             </div>
-                            <div class="w-40">
+                            <div class="w-full sm:w-40">
                                 <x-filter-select model="estadoPago" label="Estado del pago" :options="['todos' => 'Pago: Todos', 'pagado' => 'Pagado 100%', 'parcial' => 'Abono parcial', 'pendiente' => 'Pendiente']" />
                             </div>
                         </div>
@@ -109,7 +123,7 @@
                             </div>
                         @else
                             <div class="overflow-x-auto rounded-lg border border-[#DCE0D5]">
-                                <table class="w-full min-w-[820px] text-left text-sm divide-y divide-[#DCE0D5]">
+                                <table class="ct-responsive-table w-full min-w-[820px] text-left text-sm divide-y divide-[#DCE0D5]">
                                     <thead class="bg-[#F6F7F5] text-xs font-semibold uppercase tracking-wider text-[#596052]">
                                         <tr>
                                             <th class="py-3 px-3">Fecha</th>
@@ -124,17 +138,17 @@
                                     <tbody class="divide-y divide-[#DCE0D5] bg-white">
                                         @foreach ($orders as $order)
                                             <tr class="hover:bg-[#F6F7F5]/50 transition-colors">
-                                                <td class="py-3 px-3 whitespace-nowrap text-xs text-gray-600">
+                                                <td data-label="Fecha" class="py-3 px-3 whitespace-nowrap text-xs text-gray-600">
                                                     {{ substr($order->created_at, 0, 10) }}
                                                     @if ($order->reservado_hasta)
                                                         <span class="block text-[11px] text-amber-700">Revisión: {{ substr($order->reservado_hasta, 0, 10) }}</span>
                                                     @endif
                                                 </td>
-                                                <td class="py-3 px-3">
+                                                <td data-label="Producto / Cantidad" class="py-3 px-3">
                                                     <span class="font-semibold text-[#101010]">{{ $order->producto_nombre }}</span>
                                                     <span class="block text-xs text-gray-500">Cantidad: <strong>{{ $order->cantidad }}</strong> × ${{ number_format($order->precio_unitario_clp, 0, ',', '.') }}</span>
                                                 </td>
-                                                <td class="py-3 px-3">
+                                                <td data-label="Cliente &amp; Canal" class="py-3 px-3">
                                                     <span class="font-medium text-[#101010]">{{ $order->cliente ?: 'Venta directa' }}</span>
                                                     <span class="inline-flex items-center rounded bg-gray-100 px-1.5 py-0.5 text-[11px] text-gray-700 uppercase font-mono ml-1">
                                                         {{ $order->canal }}
@@ -143,10 +157,10 @@
                                                         <span class="block text-xs text-gray-500">Ref: {{ $order->referencia_externa }}</span>
                                                     @endif
                                                 </td>
-                                                <td class="py-3 px-3 text-right font-semibold text-[#101010]">
+                                                <td data-label="Total CLP" class="py-3 px-3 text-right font-semibold text-[#101010]">
                                                     ${{ number_format($order->total_clp, 0, ',', '.') }}
                                                 </td>
-                                                <td class="py-3 px-3 text-center">
+                                                <td data-label="Estado Pedido" class="py-3 px-3 text-center">
                                                     @if ($order->estado === 'reservado')
                                                         <span class="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800">Reservado</span>
                                                     @elseif ($order->estado === 'entregado')
@@ -155,7 +169,7 @@
                                                         <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-semibold text-gray-700">Cancelado</span>
                                                     @endif
                                                 </td>
-                                                <td class="py-3 px-3 text-center">
+                                                <td data-label="Estado del Pago" class="py-3 px-3 text-center">
                                                     @if ($order->estado_pago === 'pagado')
                                                         <span class="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-800">
                                                             ✓ Pagado (${{ number_format($order->pagado_clp, 0, ',', '.') }})
@@ -170,7 +184,7 @@
                                                         </span>
                                                     @endif
                                                 </td>
-                                                <td class="py-3 px-3 text-right">
+                                                <td data-label="Acciones" class="py-3 px-3 text-right">
                                                     @if ($order->estado === 'reservado')
                                                         <div class="flex items-center justify-end gap-2">
                                                             @if ($order->saldo_pendiente_clp > 0)
@@ -283,7 +297,7 @@
                                 <p class="text-xs text-gray-500">No se han registrado operaciones de apartado o ensamblaje aún.</p>
                             @else
                                 <div class="overflow-x-auto rounded-lg border border-[#DCE0D5]">
-                                    <table class="w-full min-w-[650px] text-left text-xs divide-y divide-[#DCE0D5]">
+                                    <table class="ct-responsive-table w-full min-w-[650px] text-left text-xs divide-y divide-[#DCE0D5]">
                                         <thead class="bg-[#F6F7F5] font-semibold text-[#596052]">
                                             <tr>
                                                 <th class="py-2.5 px-3">Fecha</th>
@@ -298,8 +312,8 @@
                                         <tbody class="divide-y divide-[#DCE0D5] bg-white">
                                             @foreach ($production['movements'] as $pm)
                                                 <tr>
-                                                    <td class="py-2 px-3 whitespace-nowrap text-gray-600">{{ substr($pm->created_at, 0, 16) }}</td>
-                                                    <td class="py-2 px-3 font-medium">
+                                                    <td data-label="Fecha" class="py-2 px-3 whitespace-nowrap text-gray-600">{{ substr($pm->created_at, 0, 16) }}</td>
+                                                    <td data-label="Operación" class="py-2 px-3 font-medium">
                                                         @if ($pm->tipo === 'produccion')
                                                             <span class="inline-flex items-center rounded bg-emerald-50 px-2 py-0.5 text-emerald-800 font-semibold">✨ Acrílico Fabricado</span>
                                                         @elseif ($pm->tipo === 'apartado_produccion')
@@ -310,13 +324,13 @@
                                                             <span class="inline-flex items-center rounded bg-amber-50 px-2 py-0.5 text-amber-800">Consumo de Insumo</span>
                                                         @endif
                                                     </td>
-                                                    <td class="py-2 px-3 font-semibold text-[#101010]">{{ $pm->producto_nombre }}</td>
-                                                    <td class="py-2 px-3 text-right font-mono">{{ $pm->cambio_existencia > 0 ? '+'.$pm->cambio_existencia : $pm->cambio_existencia }}</td>
-                                                    <td class="py-2 px-3 text-right font-mono text-blue-700">{{ $pm->cambio_reserva_produccion > 0 ? '+'.$pm->cambio_reserva_produccion : $pm->cambio_reserva_produccion }}</td>
-                                                    <td class="py-2 px-3 text-right font-medium">
+                                                    <td data-label="Producto" class="py-2 px-3 font-semibold text-[#101010]">{{ $pm->producto_nombre }}</td>
+                                                    <td data-label="Variación física" class="py-2 px-3 text-right font-mono">{{ $pm->cambio_existencia > 0 ? '+'.$pm->cambio_existencia : $pm->cambio_existencia }}</td>
+                                                    <td data-label="Apartado producción" class="py-2 px-3 text-right font-mono text-blue-700">{{ $pm->cambio_reserva_produccion > 0 ? '+'.$pm->cambio_reserva_produccion : $pm->cambio_reserva_produccion }}</td>
+                                                    <td data-label="Costo unitario / total" class="py-2 px-3 text-right font-medium">
                                                         {{ $pm->costo_clp !== null ? '$'.number_format($pm->costo_clp, 0, ',', '.') : '—' }}
                                                     </td>
-                                                    <td class="py-2 px-3 text-gray-600">{{ $pm->motivo ?: '—' }}</td>
+                                                    <td data-label="Detalle / Motivo" class="py-2 px-3 text-gray-600">{{ $pm->motivo ?: '—' }}</td>
                                                 </tr>
                                             @endforeach
                                         </tbody>
@@ -336,15 +350,15 @@
                             <div class="w-full sm:max-w-xs">
                                 <input
                                     type="search"
-                                    wire:model.live.debounce.300ms="buscar"
+                                    wire:model.live.debounce.500ms="buscar"
                                     placeholder="Buscar en historial..."
                                     class="w-full rounded-lg border-[#8C9681] text-sm focus:border-[#375500] focus:ring-[#375500]"
                                 >
                             </div>
-                            <div class="w-48">
+                            <div class="w-full sm:w-48">
                                 <x-filter-select model="historialTipo" label="Tipo de movimiento de stock" :options="['todos' => 'Tipo: Todos', 'entrada' => 'Entradas / Compras', 'reserva_pedido' => 'Reservas pedidos', 'venta_entregada' => 'Ventas entregadas', 'cancelacion_reserva' => 'Cancelaciones', 'apartado_produccion' => 'Apartados producción', 'liberacion_produccion' => 'Liberaciones producción', 'produccion' => 'Acrílicos fabricados', 'consumo_produccion' => 'Consumo producción', 'ajuste_merma' => 'Mermas / Ajuste (-)', 'ajuste_positivo' => 'Recuento / Ajuste (+)']" />
                             </div>
-                            <div class="w-40">
+                            <div class="w-full sm:w-40">
                                 <input
                                     type="date"
                                     wire:model.live="historialDesde"
@@ -360,7 +374,7 @@
                             </div>
                         @else
                             <div class="overflow-x-auto rounded-lg border border-[#DCE0D5]">
-                                <table class="w-full min-w-[760px] text-left text-xs divide-y divide-[#DCE0D5]">
+                                <table class="ct-responsive-table w-full min-w-[760px] text-left text-xs divide-y divide-[#DCE0D5]">
                                     <thead class="bg-[#F6F7F5] font-semibold uppercase tracking-wider text-[#596052]">
                                         <tr>
                                             <th class="py-3 px-3">Fecha y Hora</th>
@@ -376,14 +390,14 @@
                                     <tbody class="divide-y divide-[#DCE0D5] bg-white">
                                         @foreach ($movements as $m)
                                             <tr class="hover:bg-[#F6F7F5]/50 transition-colors">
-                                                <td class="py-2.5 px-3 whitespace-nowrap text-gray-600">
+                                                <td data-label="Fecha y Hora" class="py-2.5 px-3 whitespace-nowrap text-gray-600">
                                                     {{ substr($m->created_at, 0, 16) }}
                                                 </td>
-                                                <td class="py-2.5 px-3">
+                                                <td data-label="Producto" class="py-2.5 px-3">
                                                     <span class="font-semibold text-[#101010]">{{ $m->producto_nombre }}</span>
                                                     <span class="block font-mono text-[11px] text-gray-500">{{ $m->producto_sku }}</span>
                                                 </td>
-                                                <td class="py-2.5 px-3 font-medium">
+                                                <td data-label="Tipo de Movimiento" class="py-2.5 px-3 font-medium">
                                                     <span class="inline-flex rounded px-2 py-0.5 text-xs font-semibold
                                                         {{ str_contains($m->tipo, 'entrada') || str_contains($m->tipo, 'positivo') ? 'bg-emerald-50 text-emerald-800' : '' }}
                                                         {{ str_contains($m->tipo, 'venta') || str_contains($m->tipo, 'produccion') ? 'bg-blue-50 text-blue-800' : '' }}
@@ -393,19 +407,19 @@
                                                         {{ str_replace('_', ' ', $m->tipo) }}
                                                     </span>
                                                 </td>
-                                                <td class="py-2.5 px-3 text-right font-mono font-medium {{ $m->cambio_existencia < 0 ? 'text-red-700' : ($m->cambio_existencia > 0 ? 'text-emerald-700' : 'text-gray-400') }}">
+                                                <td data-label="Existencia Física" class="py-2.5 px-3 text-right font-mono font-medium {{ $m->cambio_existencia < 0 ? 'text-red-700' : ($m->cambio_existencia > 0 ? 'text-emerald-700' : 'text-gray-400') }}">
                                                     {{ $m->cambio_existencia > 0 ? '+'.$m->cambio_existencia : ($m->cambio_existencia < 0 ? $m->cambio_existencia : '0') }}
                                                 </td>
-                                                <td class="py-2.5 px-3 text-right font-mono {{ $m->cambio_reserva_pedido != 0 ? 'text-amber-800 font-semibold' : 'text-gray-400' }}">
+                                                <td data-label="Reserva Pedidos" class="py-2.5 px-3 text-right font-mono {{ $m->cambio_reserva_pedido != 0 ? 'text-amber-800 font-semibold' : 'text-gray-400' }}">
                                                     {{ $m->cambio_reserva_pedido > 0 ? '+'.$m->cambio_reserva_pedido : ($m->cambio_reserva_pedido < 0 ? $m->cambio_reserva_pedido : '—') }}
                                                 </td>
-                                                <td class="py-2.5 px-3 text-right font-mono {{ $m->cambio_reserva_produccion != 0 ? 'text-blue-800 font-semibold' : 'text-gray-400' }}">
+                                                <td data-label="Apartado Producción" class="py-2.5 px-3 text-right font-mono {{ $m->cambio_reserva_produccion != 0 ? 'text-blue-800 font-semibold' : 'text-gray-400' }}">
                                                     {{ $m->cambio_reserva_produccion > 0 ? '+'.$m->cambio_reserva_produccion : ($m->cambio_reserva_produccion < 0 ? $m->cambio_reserva_produccion : '—') }}
                                                 </td>
-                                                <td class="py-2.5 px-3 text-right font-medium text-gray-700">
+                                                <td data-label="Costo CLP" class="py-2.5 px-3 text-right font-medium text-gray-700">
                                                     {{ $m->costo_clp !== null ? '$'.number_format($m->costo_clp, 0, ',', '.') : 'Pendiente' }}
                                                 </td>
-                                                <td class="py-2.5 px-3 text-gray-600">
+                                                <td data-label="Motivo / Documento" class="py-2.5 px-3 text-gray-600">
                                                     {{ $m->motivo ?: '—' }}
                                                 </td>
                                             </tr>
@@ -418,5 +432,13 @@
                 @endif
             </div>
         </div>
+        @if (in_array($activeTab, ['pedidos', 'historial'], true))
+            <nav class="ct-inventory-pagination" aria-label="Paginación de stock">
+                <x-filament::button color="gray" wire:click="$set('stockPage', {{ max(1, $stockPage - 1) }})" :disabled="$stockPage <= 1">Anterior</x-filament::button>
+                <span>Página {{ $stockPage }}</span>
+                <x-filament::button color="gray" wire:click="$set('stockPage', {{ $stockPage + 1 }})" :disabled="! $hasMore">Siguiente</x-filament::button>
+            </nav>
+        @endif
+        @include('filament.components.purchase-history')
     </div>
 </x-filament-panels::page>

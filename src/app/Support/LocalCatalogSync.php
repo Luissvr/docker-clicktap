@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use Illuminate\Database\Connection;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 use Throwable;
@@ -12,6 +13,62 @@ class LocalCatalogSync
     public const TABLES = ['clientes', 'locales', 'paginas', 'enlaces_pagina'];
 
     protected array $snapshot = [];
+
+    public function syncRecord(Model $record, ?Connection $source = null): void
+    {
+        $local = DB::connection('local');
+        $source ??= DB::connection('supabase');
+        $this->assertConnections($local, $source);
+        $table = $record->getTable();
+        if (! in_array($table, ['clientes', 'locales', 'paginas'], true)) {
+            throw new RuntimeException('Se requiere una sincronización completa para este registro.');
+        }
+        $qualified = fn (string $name): string => $source->getQueryGrammar()->wrapTable($source->getConfig('search_path').'.'.$name);
+        $conditions = [$table => 'id = ?'];
+        if ($table === 'paginas') {
+            $conditions['enlaces_pagina'] = 'pagina_id = ?';
+            $conditions['locales'] = 'id = (SELECT local_id FROM '.$qualified('paginas').' WHERE id = ?)';
+            $conditions['clientes'] = 'id = (SELECT cliente_id FROM '.$qualified('locales').' WHERE id = (SELECT local_id FROM '.$qualified('paginas').' WHERE id = ?))';
+        } elseif ($table === 'locales') {
+            $conditions['clientes'] = 'id = (SELECT cliente_id FROM '.$qualified('locales').' WHERE id = ?)';
+        }
+
+        $completed = app(CatalogSyncState::class)->cache()->lock('catalog-sync-lock', 180)->get(function () use ($local, $source, $conditions, $qualified, $record, $table): bool {
+            $parts = [];
+            foreach ($conditions as $name => $condition) {
+                $parts[] = "'{$name}', (SELECT COALESCE(jsonb_agg(to_jsonb(t)), '[]'::jsonb) FROM ".$qualified($name).' t WHERE '.$condition.')';
+            }
+            $result = $source->selectOne('SELECT jsonb_build_object('.implode(', ', $parts).') AS snapshot', array_fill(0, count($parts), $record->getKey()), false);
+            $snapshot = json_decode($result->snapshot, true, 512, JSON_THROW_ON_ERROR);
+            $local->transaction(function () use ($local, $snapshot, $record, $table): void {
+                if (! $local->selectOne('SELECT pg_try_advisory_xact_lock(20261013, 1) AS acquired')->acquired) {
+                    throw new RuntimeException('La copia local está ocupada.');
+                }
+                if ($table === 'paginas') {
+                    $local->table('enlaces_pagina')->where('pagina_id', $record->getKey())->delete();
+                }
+                foreach (self::TABLES as $name) {
+                    foreach ($snapshot[$name] ?? [] as $row) {
+                        foreach ($row as &$value) {
+                            if (is_array($value)) {
+                                $value = json_encode($value, JSON_THROW_ON_ERROR);
+                            }
+                        }
+                        unset($value);
+                        $local->table($name)->upsert([$row], ['id']);
+                    }
+                }
+                if (($snapshot[$table] ?? []) === []) {
+                    $local->table($table)->where('id', $record->getKey())->delete();
+                }
+            });
+
+            return true;
+        });
+        if (! $completed) {
+            throw new RuntimeException('La sincronización está ocupada.');
+        }
+    }
 
     /** @return array<string, int> */
     public function sync(?Connection $source = null): array

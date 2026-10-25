@@ -7,7 +7,7 @@ use App\Models\Pagina;
 use App\Support\LinkTypeHelper;
 use App\Support\LogoPalette;
 use App\Support\PageDescription;
-use App\Support\PublicPagePublisher;
+use App\Support\PublicationQueue;
 use App\Support\TypographyHelper;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -41,9 +41,12 @@ class PaginaResource extends Resource
     {
         return $form->schema([
             Forms\Components\Grid::make(['default' => 1, 'xl' => 12])
+                ->extraAttributes(['class' => 'ct-page-editor-grid'])
                 ->schema([
                     Forms\Components\Group::make([
+                        Forms\Components\View::make('filament.components.editor-navigation'),
                         Forms\Components\Section::make('Página pública')
+                            ->extraAttributes(['x-show' => "!desktopEditor || editorTab === 'datos' || editorTab === 'todo'"])
                             ->schema([
                                 Forms\Components\TextInput::make('nombre_publico')
                                     ->label('Nombre del local')
@@ -133,12 +136,14 @@ class PaginaResource extends Resource
                                     ->helperText('Al activarlo, un nuevo logo no sustituye la paleta elegida.')
                                     ->default(false)
                                     ->columnSpanFull(),
+
                                 Forms\Components\Toggle::make('activo')
                                     ->label('Lista para publicar')
                                     ->default(false),
                             ])->columns(2),
 
                         Forms\Components\Section::make('Logo')
+                            ->extraAttributes(['x-show' => "!desktopEditor || editorTab === 'datos' || editorTab === 'todo'"])
                             ->description('Ajusta el formato de presentación sin deformar ni cortar tu imagen.')
                             ->schema([
                                 Forms\Components\Select::make('logo_layout')
@@ -160,6 +165,7 @@ class PaginaResource extends Resource
                             ])->columns(2),
 
                         Forms\Components\Section::make('Apariencia')
+                            ->extraAttributes(['x-show' => "!desktopEditor || editorTab === 'apariencia' || editorTab === 'todo'"])
                             ->headerActions([
                                 Forms\Components\Actions\Action::make('restaurarColoresRecomendados')
                                     ->label('Restaurar colores recomendados')
@@ -211,24 +217,29 @@ class PaginaResource extends Resource
                                     ->default('inter')
                                     ->required(),
                                 Forms\Components\ColorPicker::make('color_fondo')
+                                    ->extraAlpineAttributes(['x-ignore' => ''])
                                     ->label('Fondo')
                                     ->default('#ffffff')
                                     ->helperText('El texto se ajusta automáticamente para mantener contraste.'),
                                 Forms\Components\ColorPicker::make('color_texto')
+                                    ->extraAlpineAttributes(['x-ignore' => ''])
                                     ->label('Texto')
                                     ->default('#000000')
                                     ->helperText('Se recomienda un contraste mínimo de 4,5:1.'),
                                 Forms\Components\ColorPicker::make('color_boton')
+                                    ->extraAlpineAttributes(['x-ignore' => ''])
                                     ->label('Botones')
                                     ->default('#111827')
                                     ->helperText('Los enlaces se muestran con este color de fondo.'),
                                 Forms\Components\ColorPicker::make('color_texto_boton')
+                                    ->extraAlpineAttributes(['x-ignore' => ''])
                                     ->label('Texto de botones')
                                     ->default('#ffffff')
                                     ->helperText('Se corrige automáticamente si no contrasta con el botón.'),
                             ])->columns(['default' => 1, 'sm' => 2, 'lg' => 3]),
 
                         Forms\Components\Section::make('Enlaces')
+                            ->extraAttributes(['x-show' => "!desktopEditor || editorTab === 'enlaces' || editorTab === 'todo'"])
                             ->key('data.pagina-enlaces-section')
                             ->headerActions([
                                 Forms\Components\Actions\Action::make('ordenarEnlaces')
@@ -309,17 +320,57 @@ class PaginaResource extends Resource
                                             ->live(onBlur: true)
                                             ->columnSpan(['default' => 1, 'md' => 1]),
                                         Forms\Components\TextInput::make('etiqueta')
-                                            ->label('Texto del botón')
-                                            ->placeholder('Ej. Escríbenos, Síguenos...')
-                                            ->helperText('Visible en el botón público (opcional).')
+                                            ->label(fn (Forms\Get $get): string => match ($get('tipo')) {
+                                                'instagram' => 'Texto para Instagram',
+                                                'facebook' => 'Texto para Facebook',
+                                                'whatsapp' => 'Texto para WhatsApp',
+                                                'review' => 'Texto para reseñas',
+                                                'location' => 'Texto para ubicación',
+                                                'transferencia' => 'Texto del botón',
+                                                default => 'Texto del botón',
+                                            })
+                                            ->placeholder(fn (Forms\Get $get): string => match ($get('tipo')) {
+                                                'instagram' => 'Ej. Síguenos en Instagram',
+                                                'facebook' => 'Ej. Visita nuestro Facebook',
+                                                'whatsapp' => 'Ej. Escríbenos por WhatsApp',
+                                                'review' => 'Ej. Déjanos una reseña',
+                                                'location' => 'Ej. Cómo llegar',
+                                                'transferencia' => 'Ej. Copiar datos de transferencia',
+                                                default => 'Ej. Visita nuestra página',
+                                            })
+                                            ->helperText(fn (Forms\Get $get): string => match ($get('tipo')) {
+                                                'review' => 'Si configuraste el Place ID de Google, el destino se genera automáticamente.',
+                                                'transferencia' => 'Este texto aparecerá en el botón que copia los datos.',
+                                                default => 'Texto visible en el botón público. Si lo dejas vacío, se usa el nombre del tipo.',
+                                            })
                                             ->maxLength(255)
+                                            ->live(onBlur: true)
                                             ->columnSpan(['default' => 1, 'md' => 1]),
                                         Forms\Components\TextInput::make('url')
-                                            ->label('Destino (URL)')
-                                            ->placeholder('https://...')
+                                            ->label(fn (Forms\Get $get): string => match ($get('tipo')) {
+                                                'instagram' => 'Perfil de Instagram (URL)',
+                                                'facebook' => 'Página de Facebook (URL)',
+                                                'whatsapp' => 'Enlace de WhatsApp (URL)',
+                                                'review' => 'Enlace de reseñas (URL)',
+                                                'location' => 'Ubicación (URL de Maps)',
+                                                default => 'Destino (URL)',
+                                            })
+                                            ->placeholder(fn (Forms\Get $get): string => match ($get('tipo')) {
+                                                'instagram' => 'https://instagram.com/tu-negocio',
+                                                'facebook' => 'https://facebook.com/tu-negocio',
+                                                'whatsapp' => 'https://wa.me/56912345678',
+                                                'review' => 'https://g.page/r/.../review',
+                                                'location' => 'https://maps.google.com/?q=...',
+                                                default => 'https://...',
+                                            })
                                             ->url()
                                             ->maxLength(2048)
-                                            ->helperText('Opcional si es botón de solo copiar.')
+                                            ->helperText(fn (Forms\Get $get): string => match ($get('tipo')) {
+                                                'whatsapp' => 'Incluye el código de país en el número de wa.me.',
+                                                'review' => 'Se reemplaza por el enlace automático cuando la página tiene un Place ID de Google.',
+                                                'location' => 'Pega un enlace compartido de Google Maps.',
+                                                default => (bool) $get('copiar_texto') ? 'Opcional si este botón solo copia texto.' : 'Pega el enlace completo, incluyendo https://.',
+                                            })
                                             ->visible(fn (Forms\Get $get): bool => $get('tipo') !== 'transferencia')
                                             ->columnSpan(['default' => 1, 'md' => 1]),
                                         Forms\Components\Toggle::make('copiar_texto')
@@ -344,7 +395,7 @@ class PaginaResource extends Resource
                                             ->visible(fn (Forms\Get $get): bool => $get('tipo') === 'transferencia' || (bool) $get('copiar_texto'))
                                             ->columnSpanFull(),
                                     ])
-                                    ->columns(['default' => 1, 'md' => 2, 'xl' => 4])
+                                    ->columns(['default' => 1, 'md' => 2, 'xl' => 2])
                                     ->orderColumn('posicion')
                                     ->reorderableWithDragAndDrop(false)
                                     ->extraAttributes(fn (Component $livewire): array => [
@@ -381,9 +432,14 @@ class PaginaResource extends Resource
                             ]),
                     ])
                         ->extraAttributes([
+                            'class' => 'ct-editor-fields',
+                            'x-on:resize.window.debounce.150ms' => "desktopEditor = window.matchMedia('(min-width: 1024px)').matches",
+                            'x-on:form-validation-error.window' => "editorTab = 'todo'",
                             'x-data' => <<<'JS'
                                 {
                                     selectedLink: null,
+                                    editorTab: 'datos',
+                                    desktopEditor: window.matchMedia('(min-width: 1024px)').matches,
                                     async moveLink(direction) {
                                         if (this.selectedLink === null) return;
 
@@ -393,6 +449,7 @@ class PaginaResource extends Resource
                                 }
                                 JS,
                         ])
+                        ->live(onBlur: true)
                         ->columnSpan(['default' => 12, 'xl' => 7]),
 
                     Forms\Components\Group::make([
@@ -410,7 +467,7 @@ class PaginaResource extends Resource
                                 Forms\Components\View::make('filament.components.pagina-live-preview'),
                             ])
                             ->collapsible(),
-                    ])->columnSpan(['default' => 12, 'xl' => 5]),
+                    ])->extraAttributes(['class' => 'ct-editor-preview'])->columnSpan(['default' => 12, 'xl' => 5]),
                 ]),
         ]);
     }
@@ -488,11 +545,11 @@ class PaginaResource extends Resource
                         ->visible(fn (Pagina $record): bool => $record->activo)
                         ->action(function (Pagina $record): void {
                             try {
-                                $commit = app(PublicPagePublisher::class)->publish($record);
+                                app(PublicationQueue::class)->request($record);
 
                                 Notification::make()
-                                    ->title('Publicación enviada')
-                                    ->body("Commit {$commit} enviado al repositorio.")
+                                    ->title('Publicación en cola')
+                                    ->body('Puedes seguir trabajando. Consulta el avance en Publicaciones.')
                                     ->success()
                                     ->send();
                             } catch (Throwable $exception) {

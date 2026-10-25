@@ -27,10 +27,12 @@ class CatalogConnectionTest extends TestCase
         }
         $local = config('database.connections.local');
         $local['database'] = 'clicktap_test';
+        $local['search_path'] = 'clicktap_cache';
         config([
             'database.connections.local' => $local,
             'database.connections.supabase' => array_merge($local, ['search_path' => 'catalog_test_source']),
             'database.default' => 'supabase',
+            'auth.database_connection' => 'supabase',
         ]);
         DB::purge('local');
         DB::purge('supabase');
@@ -129,7 +131,7 @@ class CatalogConnectionTest extends TestCase
 
     public function test_local_refresh_failure_does_not_report_the_remote_save_as_failed(): void
     {
-        $this->mock(LocalCatalogSync::class)->shouldReceive('sync')->once()->andThrow(new RuntimeException('Local no disponible'));
+        $this->mock(LocalCatalogSync::class)->shouldReceive('syncRecord')->once()->andThrow(new RuntimeException('Local no disponible'));
         Livewire::test(CreateCliente::class)->fillForm(['nombre' => 'Guardado remoto'])
             ->call('create')->assertHasNoFormErrors()->assertNotified('Guardado en Supabase');
         $this->assertSame(1, DB::connection('supabase')->table('clientes')->where('nombre', 'Guardado remoto')->count());

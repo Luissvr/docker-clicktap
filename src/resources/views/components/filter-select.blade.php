@@ -1,12 +1,21 @@
 @props(['model', 'label', 'options'])
 
+<label class="ct-mobile-filter">
+    <span class="sr-only">{{ $label }}</span>
+    <select wire:model.live="{{ $model }}" class="ct-native-filter" aria-label="{{ $label }}">
+        @foreach ($options as $key => $text)
+            <option value="{{ $key }}">{{ $text }}</option>
+        @endforeach
+    </select>
+</label>
+
 <div
     x-data="{ open: false, value: $wire.entangle(@js($model)).live }"
     x-id="['ct-filter-options']"
     x-on:keydown.escape.stop="open = false; $refs.trigger.focus()"
     x-on:focusout="if (!$el.contains($event.relatedTarget)) open = false"
     x-on:click.outside="open = false"
-    class="ct-filter-select"
+    class="ct-filter-select ct-desktop-filter"
 >
     <button
         x-ref="trigger"

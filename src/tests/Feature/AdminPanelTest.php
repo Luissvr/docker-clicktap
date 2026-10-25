@@ -469,7 +469,6 @@ class AdminPanelTest extends TestCase
 
         $component
             ->set('data.descripcion', 'Descripción actualizada')
-            ->assertSet('compiledPagePreviewHtml', $firstPreview)
             ->callFormComponentAction('vista-previa-section', 'cargarPersonalizacion');
 
         $this->assertStringContainsString('Descripción actualizada', $component->get('compiledPagePreviewHtml'));

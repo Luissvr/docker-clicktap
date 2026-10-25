@@ -2,7 +2,7 @@
 # Requiere Docker Compose 2.24.4+ (soporte !reset y !override).
 services:
   app:
-    environment: !override
+    environment: !override &shared-environment
       CLICKTAP_LOCAL_CATALOG: "true"
       LOCAL_DB_HOST: clicktap_db
       LOCAL_DB_DATABASE: ${DB_DATABASE:-clicktap_db}
@@ -17,6 +17,14 @@ services:
       timeout: 3s
       retries: 12
       start_period: 10s
+  publication-worker:
+    environment: !override
+      <<: *shared-environment
+    depends_on:
+      app:
+        condition: service_healthy
+      db:
+        condition: service_healthy
   db:
     profiles: !reset []
     healthcheck:

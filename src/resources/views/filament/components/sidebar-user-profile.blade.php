@@ -77,6 +77,7 @@
                 icon="heroicon-m-arrow-left-on-rectangle"
                 method="post"
                 tag="form"
+                x-on:submit="(() => { try { Object.keys(localStorage).filter(key => key.startsWith('clicktap:draft:')).forEach(key => localStorage.removeItem(key)); } catch (_) {} })()"
             >
                 Cerrar sesión
             </x-filament::dropdown.list.item>

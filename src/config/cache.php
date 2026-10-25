@@ -34,6 +34,12 @@ return [
 
     'stores' => [
 
+        'publications' => [
+            'driver' => 'file',
+            'path' => storage_path('framework/publications/data'),
+            'lock_path' => storage_path('framework/publications/locks'),
+        ],
+
         'array' => [
             'driver' => 'array',
             'serialize' => false,

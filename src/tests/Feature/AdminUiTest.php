@@ -22,7 +22,7 @@ class AdminUiTest extends TestCase
         $this->actingAs($user)->get('/admin')
             ->assertOk()
             ->assertSee('fi-sidebar', false)
-            ->assertSee('clicktap-horizontal.png', false)
+            ->assertSee('clicktap-logo-transparent.png', false)
             ->assertSee('Bienvenido a ClickTap')
             ->assertSee('/admin/paginas', false)
             ->assertSee('/admin/local-negocios', false)

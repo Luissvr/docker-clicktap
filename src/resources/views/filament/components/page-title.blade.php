@@ -36,7 +36,7 @@
                 <x-filament::icon icon="heroicon-o-arrow-left" class="ct-page-back-icon" />
                 <span>{{ $backLabel }}</span>
             </a>
-            @if ($this instanceof \App\Filament\Resources\PaginaResource\Pages\CreatePagina && $this->ventaId)
+            @if (($this instanceof \App\Filament\Resources\PaginaResource\Pages\CreatePagina || $this instanceof \App\Filament\Resources\PaginaResource\Pages\EditPagina) && $this->ventaId)
                 <a href="{{ \App\Filament\Pages\Ventas::getUrl(['venta' => $this->ventaId]) }}" class="ct-page-back" wire:navigate>
                     <x-filament::icon icon="heroicon-o-arrow-left" class="ct-page-back-icon" />
                     <span>Volver a la venta</span>

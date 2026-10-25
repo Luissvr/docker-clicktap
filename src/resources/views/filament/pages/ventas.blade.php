@@ -19,7 +19,7 @@
                 <h3 class="font-semibold text-[#101010]">Página del cliente</h3>
                 @if ($pageId)
                     <p class="mt-2 text-sm text-[#596052]">{{ $pageName }}</p>
-                    <a href="{{ \App\Filament\Resources\PaginaResource::getUrl('edit', ['record' => $pageId]) }}" wire:navigate class="mt-4 inline-flex min-h-11 items-center gap-2 rounded-lg border border-[#DCE0D5] px-4 text-sm font-medium text-[#101010] hover:bg-[#F6F7F5]">
+                    <a href="{{ \App\Filament\Resources\PaginaResource::getUrl('edit', ['record' => $pageId, 'venta_id' => $sale->id]) }}" wire:navigate class="mt-4 inline-flex min-h-11 items-center gap-2 rounded-lg border border-[#DCE0D5] px-4 text-sm font-medium text-[#101010] hover:bg-[#F6F7F5]">
                         <x-heroicon-o-pencil-square class="h-4 w-4" aria-hidden="true" /> Editar página
                     </a>
                 @elseif ($isDraft)

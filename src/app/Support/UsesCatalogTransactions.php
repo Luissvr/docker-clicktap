@@ -30,7 +30,7 @@ trait UsesCatalogTransactions
     {
         CatalogConnection::connection()->commit();
         if (CatalogConnection::connection()->transactionLevel() === 0) {
-            CatalogConnection::refreshAfterWrite();
+            CatalogConnection::refreshAfterWrite($this->getRecord());
         }
     }
 
