@@ -50,7 +50,7 @@
         .logo-img--round { aspect-ratio: 1; height: var(--logo-width); object-fit: cover; border-radius: 50%; }
         .logo-img--rounded { aspect-ratio: 1; height: var(--logo-width); object-fit: contain; border-radius: 18px; background: #fff; padding: 8px; }
         h1 { margin: 20px 0 8px; font-size: 32px; }
-        .description { max-width: 100%; line-height: 1.55; text-align: justify; overflow-wrap: anywhere; }
+        .description { max-width: 100%; line-height: 1.55; text-align: justify; overflow-wrap: anywhere; white-space: pre-line; }
         .description--unbroken { text-justify: inter-character; }
         .details { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 24px; margin: 28px 0; text-align: left; }
         .detail-section { display: flex; align-items: flex-start; gap: 12px; min-width: 0; }
