@@ -744,7 +744,7 @@ nav.fi-sidebar-nav {
     .ct-editor-navigation { display: flex; flex-wrap: wrap; gap: .5rem; }
     .ct-editor-navigation button { padding: .625rem 1rem; border-radius: .5rem; background: #fff; border: 1px solid #dce0d5; font-size: .875rem; color: #101010; }
     .ct-editor-navigation button[aria-pressed="true"] { background: #b6ff00; border-color: #b6ff00; }
-    .ct-editor-navigation .ct-editor-save { margin-left: auto; background: #b6ff00; font-weight: 600; }
+    .ct-editor-navigation .ct-editor-save { display: inline-flex; align-items: center; gap: .5rem; margin-left: auto; background: #b6ff00; font-weight: 600; }
     .fi-page:has(.ct-page-editor-grid) .fi-form-actions { position: sticky; bottom: 0; z-index: 20; padding: .75rem 1rem; background: #f6f7f5; border-top: 1px solid #dce0d5; }
 }
 @media (max-width: 639px) {

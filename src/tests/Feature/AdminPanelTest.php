@@ -160,7 +160,7 @@ class AdminPanelTest extends TestCase
             ->fillForm([
                 'nombre_publico' => 'Barbería Vintage',
                 'slug' => 'barberia-vintage',
-                'tema' => 'barber',
+                'tema' => 'default',
                 'tipografia' => 'poppins',
                 'activo' => false,
                 'enlaces' => [
@@ -194,6 +194,88 @@ class AdminPanelTest extends TestCase
             ->assertSee('fonts.googleapis.com/css2?family=Poppins', false)
             ->assertSee("'Poppins'", false)
             ->assertSee('Agendar por WhatsApp', false);
+    }
+
+    public function test_review_link_is_created_from_its_own_place_id(): void
+    {
+        $this->actingAs(User::factory()->create());
+        $component = Livewire::test(CreatePagina::class)
+            ->fillForm(['nombre_publico' => 'Reseñas', 'slug' => 'resenas'])
+            ->callFormComponentAction('enlaces', 'add');
+        $key = array_key_first($component->get('data.enlaces'));
+
+        $component->set("data.enlaces.{$key}.tipo", 'review')
+            ->set("data.enlaces.{$key}.place_id", 'ChIJ_Resena_123')
+            ->assertSee('Place ID de Google')
+            ->assertDontSee('Destino (URL)')
+            ->assertDontSee('Copiar texto al pulsar')
+            ->call('create')
+            ->assertHasNoFormErrors();
+
+        $link = Pagina::where('slug', 'resenas')->firstOrFail()->enlaces()->sole();
+        $this->assertSame('https://search.google.com/local/writereview?placeid=ChIJ_Resena_123', $link->url);
+        $this->assertFalse($link->copiar_texto);
+    }
+
+    public function test_existing_review_place_id_can_be_edited_without_the_page_place_id(): void
+    {
+        $this->actingAs(User::factory()->create());
+        $page = Pagina::factory()->create([
+            'tema' => 'comercio',
+            'contenido_extra' => ['place_id' => 'ChIJ_Obsoleto', 'tagline' => 'Una frase'],
+        ]);
+        $link = $page->enlaces()->create([
+            'tipo' => 'review', 'url' => 'https://search.google.com/local/writereview?placeid=ChIJ_Anterior',
+            'posicion' => 0, 'activo' => true,
+        ]);
+        $component = Livewire::test(EditPagina::class, ['record' => $page->getRouteKey()]);
+        $key = array_key_first($component->get('data.enlaces'));
+
+        $component->assertSet("data.enlaces.{$key}.place_id", 'ChIJ_Anterior')
+            ->set("data.enlaces.{$key}.place_id", 'ChIJ_Nuevo')
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $this->assertSame('https://search.google.com/local/writereview?placeid=ChIJ_Nuevo', $link->fresh()->url);
+        $this->assertArrayNotHasKey('place_id', $page->fresh()->contenido_extra);
+        $this->assertSame('Una frase', $page->fresh()->contenido_extra['tagline']);
+    }
+
+    public function test_empty_transfer_can_be_saved_active_and_renders_as_a_button(): void
+    {
+        $this->actingAs(User::factory()->create());
+        Livewire::test(CreatePagina::class)
+            ->fillForm([
+                'nombre_publico' => 'Transferencia pendiente', 'slug' => 'transferencia-pendiente',
+                'enlaces' => [['tipo' => 'transferencia', 'activo' => true, 'texto_copia' => null]],
+            ])
+            ->call('create')
+            ->assertHasNoFormErrors();
+
+        $page = Pagina::where('slug', 'transferencia-pendiente')->firstOrFail();
+        $link = $page->enlaces()->sole();
+        $this->assertTrue($link->activo);
+        $this->assertTrue($link->copiar_texto);
+        $this->get(route('paginas.preview', $page))->assertOk()
+            ->assertSee('type="button" data-copy-text=""', false)
+            ->assertDontSee('<span class="link-button link-button--disabled">', false);
+        $html = PagePreviewCompiler::compile([], $page);
+        $this->assertStringContainsString('type="button" data-copy-text=""', $html);
+    }
+
+    public function test_both_appearance_modes_show_description_and_only_explicit_review_links(): void
+    {
+        foreach (['comercio', 'default'] as $theme) {
+            $html = PagePreviewCompiler::compile([
+                'tema' => $theme, 'descripcion' => "Descripción del negocio\nSegunda línea",
+                'contenido_extra' => ['place_id' => 'ChIJ_Obsoleto'],
+                'enlaces' => [['tipo' => 'review', 'place_id' => 'ChIJ_Enlace', 'activo' => true]],
+            ]);
+            $this->assertStringContainsString('<body class="theme-'.$theme.'">', $html);
+            $this->assertStringContainsString("Descripción del negocio\nSegunda línea", $html);
+            $this->assertStringContainsString('writereview?placeid=ChIJ_Enlace', $html);
+            $this->assertStringNotContainsString('ChIJ_Obsoleto', $html);
+        }
     }
 
     public function test_add_link_button_adds_an_editable_link_on_create_page(): void

@@ -110,9 +110,9 @@
                     default => 'Enlace',
                 });
             @endphp
-            @if ($enlace->copiar_texto && $enlace->texto_copia)
+            @if ($enlace->tipo === 'transferencia' || ($enlace->tipo !== 'review' && $enlace->copiar_texto && $enlace->texto_copia))
                 <button class="link-button" type="button" data-copy-text="{{ $enlace->texto_copia }}"><x-paginas.link-icon :type="$enlace->tipo" /><span class="link-label">{{ $enlaceLabel }}</span></button>
-            @elseif ($enlace->copiar_texto || ! $enlace->url)
+            @elseif (($enlace->tipo !== 'review' && $enlace->copiar_texto) || ! $enlace->url)
                 <span class="link-button link-button--disabled"><x-paginas.link-icon :type="$enlace->tipo" /><span class="link-label">{{ $enlaceLabel }}</span></span>
             @else
                 <a class="link-button" href="{{ $enlace->url }}" target="_blank" rel="noopener noreferrer"><x-paginas.link-icon :type="$enlace->tipo" /><span class="link-label">{{ $enlaceLabel }}</span></a>
@@ -124,7 +124,7 @@
 <script>
     document.addEventListener('click', async (event) => {
         const button = event.target.closest('[data-copy-text]');
-        if (!button) return;
+        if (!button || !button.dataset.copyText.trim()) return;
 
         await navigator.clipboard.writeText(button.dataset.copyText);
         const originalLabel = button.textContent;

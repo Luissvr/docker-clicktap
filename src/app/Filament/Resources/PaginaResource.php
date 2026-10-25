@@ -92,11 +92,6 @@ class PaginaResource extends Resource
                                     ->rows(2)
                                     ->maxLength(1000)
                                     ->helperText('Se muestra debajo de ubicación y contacto.'),
-                                Forms\Components\TextInput::make('contenido_extra.place_id')
-                                    ->label('Place ID de Google')
-                                    ->maxLength(255)
-                                    ->live(debounce: 500)
-                                    ->helperText('Al ingresarlo, la vista previa genera el enlace para dejar una reseña en Google.'),
                                 Forms\Components\Select::make('contenido_extra.transfer_logo')
                                     ->label('Logo en botones de transferencia')
                                     ->options([
@@ -208,7 +203,10 @@ class PaginaResource extends Resource
                             ->schema([
                                 Forms\Components\Select::make('tema')
                                     ->label('Tema visual')
-                                    ->options(['comercio' => 'Comercio'])
+                                    ->options([
+                                        'comercio' => 'Comercio',
+                                        'default' => 'Boceto predeterminado',
+                                    ])
                                     ->default('comercio')
                                     ->required()
                                     ->live(),
@@ -325,12 +323,15 @@ class PaginaResource extends Resource
                                             ->required()
                                             ->live()
                                             ->afterStateUpdated(function (?string $state, Forms\Get $get, Forms\Set $set): void {
-                                                if ($state === 'review' && blank($get('url'))) {
-                                                    $set('url', 'https://search.google.com/local/writereview?placeid=');
+                                                if ($state === 'review') {
+                                                    $set('place_id', LinkTypeHelper::reviewPlaceIdFromUrl($get('url')));
+                                                    $set('url', LinkTypeHelper::reviewUrlFromPlaceId($get('place_id')));
+                                                    $set('copiar_texto', false);
                                                 }
 
                                                 if ($state === 'transferencia') {
                                                     $set('copiar_texto', true);
+                                                    $set('url', null);
                                                     if (blank($get('etiqueta'))) {
                                                         $set('etiqueta', 'Copiar datos de transferencia');
                                                     }
@@ -364,19 +365,31 @@ class PaginaResource extends Resource
                                                 default => 'Ej. Visita nuestra página',
                                             })
                                             ->helperText(fn (Forms\Get $get): string => match ($get('tipo')) {
-                                                'review' => 'Si configuraste el Place ID de Google, el destino se genera automáticamente.',
+                                                'review' => 'El destino se genera con el Place ID de este enlace.',
                                                 'transferencia' => 'Este texto aparecerá en el botón que copia los datos.',
                                                 default => 'Texto visible en el botón público. Si lo dejas vacío, se usa el nombre del tipo.',
                                             })
                                             ->maxLength(255)
                                             ->live(onBlur: true)
                                             ->columnSpan(['default' => 1, 'md' => 1]),
+                                        Forms\Components\TextInput::make('place_id')
+                                            ->label('Place ID de Google')
+                                            ->placeholder('Ej. ChIJ...')
+                                            ->helperText('Ingresa solo el Place ID del negocio; el enlace de reseña se genera automáticamente.')
+                                            ->maxLength(255)
+                                            ->regex('/^[A-Za-z0-9_-]+$/')
+                                            ->dehydrated(false)
+                                            ->live(debounce: 500)
+                                            ->afterStateHydrated(function (Forms\Get $get, Forms\Set $set): void {
+                                                $set('place_id', LinkTypeHelper::reviewPlaceIdFromUrl($get('url')));
+                                            })
+                                            ->afterStateUpdated(fn (?string $state, Forms\Set $set) => $set('url', LinkTypeHelper::reviewUrlFromPlaceId($state)))
+                                            ->visible(fn (Forms\Get $get): bool => $get('tipo') === 'review'),
                                         Forms\Components\TextInput::make('url')
                                             ->label(fn (Forms\Get $get): string => match ($get('tipo')) {
                                                 'instagram' => 'Perfil de Instagram (URL)',
                                                 'facebook' => 'Página de Facebook (URL)',
                                                 'whatsapp' => 'Enlace de WhatsApp (URL)',
-                                                'review' => 'Enlace de reseñas (URL)',
                                                 'location' => 'Ubicación (URL de Maps)',
                                                 default => 'Destino (URL)',
                                             })
@@ -384,7 +397,6 @@ class PaginaResource extends Resource
                                                 'instagram' => 'https://instagram.com/tu-negocio',
                                                 'facebook' => 'https://facebook.com/tu-negocio',
                                                 'whatsapp' => 'https://wa.me/56912345678',
-                                                'review' => 'https://g.page/r/.../review',
                                                 'location' => 'https://maps.google.com/?q=...',
                                                 default => 'https://...',
                                             })
@@ -392,16 +404,27 @@ class PaginaResource extends Resource
                                             ->maxLength(2048)
                                             ->helperText(fn (Forms\Get $get): string => match ($get('tipo')) {
                                                 'whatsapp' => 'Incluye el código de país en el número de wa.me.',
-                                                'review' => 'Se reemplaza por el enlace automático cuando la página tiene un Place ID de Google.',
                                                 'location' => 'Pega un enlace compartido de Google Maps.',
                                                 default => (bool) $get('copiar_texto') ? 'Opcional si este botón solo copia texto.' : 'Pega el enlace completo, incluyendo https://.',
                                             })
-                                            ->visible(fn (Forms\Get $get): bool => $get('tipo') !== 'transferencia')
+                                            ->dehydrateStateUsing(fn (?string $state, Forms\Get $get): ?string => match ($get('tipo')) {
+                                                'review' => LinkTypeHelper::reviewUrlFromPlaceId($get('place_id')),
+                                                'transferencia' => null,
+                                                default => $state,
+                                            })
+                                            ->dehydratedWhenHidden()
+                                            ->visible(fn (Forms\Get $get): bool => ! in_array($get('tipo'), ['review', 'transferencia'], true))
                                             ->columnSpan(['default' => 1, 'md' => 1]),
                                         Forms\Components\Toggle::make('copiar_texto')
                                             ->label('Copiar texto al pulsar')
                                             ->live()
-                                            ->visible(fn (Forms\Get $get): bool => $get('tipo') !== 'transferencia'),
+                                            ->dehydrateStateUsing(fn (mixed $state, Forms\Get $get): bool => match ($get('tipo')) {
+                                                'transferencia' => true,
+                                                'review' => false,
+                                                default => (bool) $state,
+                                            })
+                                            ->dehydratedWhenHidden()
+                                            ->visible(fn (Forms\Get $get): bool => ! in_array($get('tipo'), ['review', 'transferencia'], true)),
                                         Forms\Components\Toggle::make('activo')
                                             ->label('Activo')
                                             ->default(true),
@@ -416,8 +439,7 @@ class PaginaResource extends Resource
                                             ->maxLength(5000)
                                             ->rows(3)
                                             ->live(debounce: 500)
-                                            ->required(fn (Forms\Get $get): bool => $get('tipo') === 'transferencia' && (bool) $get('activo'))
-                                            ->visible(fn (Forms\Get $get): bool => $get('tipo') === 'transferencia' || (bool) $get('copiar_texto'))
+                                            ->visible(fn (Forms\Get $get): bool => $get('tipo') === 'transferencia' || ($get('tipo') !== 'review' && (bool) $get('copiar_texto')))
                                             ->columnSpanFull(),
                                     ])
                                     ->columns(['default' => 1, 'md' => 2, 'xl' => 2])

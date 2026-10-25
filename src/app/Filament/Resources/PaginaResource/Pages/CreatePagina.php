@@ -47,6 +47,7 @@ class CreatePagina extends CreateRecord
 
     protected function mutateFormDataBeforeCreate(array $data): array
     {
+        unset($data['contenido_extra']['place_id']);
         $data['actualizada_por'] = auth()->id();
 
         return $data;

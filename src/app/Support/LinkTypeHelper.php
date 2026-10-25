@@ -57,6 +57,19 @@ final class LinkTypeHelper
         };
     }
 
+    public static function reviewPlaceIdFromUrl(?string $url): ?string
+    {
+        $query = parse_url((string) $url, PHP_URL_QUERY);
+        if (! is_string($query)) {
+            return null;
+        }
+
+        parse_str($query, $parameters);
+        $placeId = $parameters['placeid'] ?? $parameters['query_place_id'] ?? null;
+
+        return is_string($placeId) && trim($placeId) !== '' ? trim($placeId) : null;
+    }
+
     public static function reviewUrlFromPlaceId(?string $placeId): ?string
     {
         $placeId = trim((string) $placeId);
@@ -82,7 +95,7 @@ final class LinkTypeHelper
     }
 
     /**
-     * @param array<string, mixed> $state
+     * @param  array<string, mixed>  $state
      */
     public static function itemLabel(array $state): HtmlString
     {

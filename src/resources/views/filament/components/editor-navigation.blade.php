@@ -46,9 +46,13 @@
     @foreach (['datos' => 'Datos y logo', 'enlaces' => 'Enlaces', 'apariencia' => 'Apariencia', 'todo' => 'Ver todo'] as $key => $label)
         <button type="button" x-on:click="editorTab = @js($key)" x-bind:aria-pressed="editorTab === @js($key)">{{ $label }}</button>
     @endforeach
-    <button type="submit" form="form" wire:loading.attr="disabled" class="ct-editor-save">Guardar</button>
+    <button type="submit" form="form" wire:loading.attr="disabled" wire:target="save,create" class="ct-editor-save">
+        <span wire:loading wire:target="save,create" role="status" aria-label="Guardando">
+            <x-filament::loading-indicator class="h-4 w-4" aria-hidden="true" />
+        </span>
+        Guardar
+    </button>
     <span wire:dirty class="text-sm">Cambios sin guardar</span>
-    <span wire:loading wire:target="save,create" class="text-sm" role="status">Guardando…</span>
 </nav>
 <div x-cloak x-show="draft !== null" class="ct-draft-recovery" role="status">
     <span x-text="draft?.revision === revision ? 'Hay cambios recuperables en este dispositivo (24 h). Las imágenes deben seleccionarse de nuevo.' : 'La página cambió en el servidor. La copia del dispositivo pertenece a una revisión anterior.'"></span>

@@ -43,25 +43,18 @@ final class PagePreviewCompiler
 
         $enlaces = collect($rawEnlaces)
             ->filter(fn ($item) => ($item['activo'] ?? true))
+            ->map(function (array $item): array {
+                if (($item['tipo'] ?? null) === 'review') {
+                    if (array_key_exists('place_id', $item)) {
+                        $item['url'] = LinkTypeHelper::reviewUrlFromPlaceId($item['place_id']);
+                    }
+                    $item['copiar_texto'] = false;
+                }
+
+                return $item;
+            })
             ->values()
             ->all();
-        $placeId = trim((string) ($extra['place_id'] ?? ''));
-        $reviewUrl = $tema === 'comercio' ? LinkTypeHelper::reviewUrlFromPlaceId($placeId) : null;
-        if ($reviewUrl !== null) {
-            $reviewIndex = collect($enlaces)->search(fn (array $enlace): bool => ($enlace['tipo'] ?? null) === 'review');
-            if ($reviewIndex === false) {
-                $enlaces[] = [
-                    'tipo' => 'review',
-                    'nombre' => 'Reseña Google',
-                    'etiqueta' => 'Dejar una reseña',
-                    'url' => $reviewUrl,
-                    'activo' => true,
-                ];
-            } else {
-                $enlaces[$reviewIndex]['url'] = $reviewUrl;
-                $enlaces[$reviewIndex]['activo'] = true;
-            }
-        }
 
         $logoState = $data['logo_path'] ?? ($record?->logo_path ?? null);
         $logoUrl = self::resolveLogoUrl($logoState, $record);

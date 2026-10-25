@@ -4,7 +4,6 @@ namespace App\Data;
 
 use App\Models\EnlacePagina;
 use App\Models\Pagina;
-use App\Support\LinkTypeHelper;
 use App\Support\PageAppearance;
 
 final readonly class PaginaPublica
@@ -66,26 +65,6 @@ final readonly class PaginaPublica
             ->map(fn (EnlacePagina $enlace): array => self::link($enlace, $transferLogo))
             ->values()
             ->all();
-        $placeId = trim((string) ($extra['place_id'] ?? ''));
-        $reviewUrl = $pagina->tema === 'comercio' ? LinkTypeHelper::reviewUrlFromPlaceId($placeId) : null;
-        if ($reviewUrl !== null) {
-            $reviewIndex = collect($links)->search(fn (array $link): bool => ($link['type'] ?? null) === 'review');
-            if ($reviewIndex === false) {
-                $links[] = [
-                    'type' => 'review',
-                    'name' => 'Reseña Google',
-                    'icon' => 'review',
-                    'label' => 'Dejar una reseña',
-                    'href' => $reviewUrl,
-                    'copyText' => null,
-                    'logo' => null,
-                    'isDisabled' => false,
-                ];
-            } else {
-                $links[$reviewIndex]['href'] = $reviewUrl;
-                $links[$reviewIndex]['isDisabled'] = false;
-            }
-        }
 
         $appearance = PageAppearance::resolve([
             'color_fondo' => $pagina->color_fondo,
@@ -130,8 +109,8 @@ final readonly class PaginaPublica
     private static function link(EnlacePagina $enlace, ?string $transferLogo = null): array
     {
         $type = (string) $enlace->tipo;
-        $url = trim((string) $enlace->url);
-        $copyText = $enlace->copiar_texto ? trim((string) $enlace->texto_copia) : '';
+        $url = $type === 'transferencia' ? '' : trim((string) $enlace->url);
+        $copyText = ($type === 'transferencia' || ($type !== 'review' && $enlace->copiar_texto)) ? trim((string) $enlace->texto_copia) : '';
 
         return [
             'type' => $type,
@@ -142,9 +121,9 @@ final readonly class PaginaPublica
             },
             'label' => trim((string) ($enlace->etiqueta ?: $enlace->nombre)) ?: self::defaultLabel($type),
             'href' => $url !== '' ? $url : null,
-            'copyText' => $copyText !== '' ? $copyText : null,
+            'copyText' => $type === 'transferencia' || $copyText !== '' ? $copyText : null,
             'logo' => $type === 'transferencia' ? $transferLogo : null,
-            'isDisabled' => $url === '' && $copyText === '',
+            'isDisabled' => $type !== 'transferencia' && $url === '' && $copyText === '',
         ];
     }
 

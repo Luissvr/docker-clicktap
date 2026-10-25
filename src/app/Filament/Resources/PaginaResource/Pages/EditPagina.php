@@ -42,6 +42,7 @@ class EditPagina extends EditRecord
 
     protected function mutateFormDataBeforeSave(array $data): array
     {
+        unset($data['contenido_extra']['place_id']);
         $data['actualizada_por'] = auth()->id();
 
         return $data;

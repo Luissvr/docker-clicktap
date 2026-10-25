@@ -263,6 +263,10 @@
 
     <h1>{{ $nombre ?: 'Nombre del negocio' }}</h1>
 
+    @if ($descripcion)
+        <p @class(['description', 'description--unbroken' => preg_match('/\s/u', trim((string) $descripcion)) === 0])>{{ $descripcion }}</p>
+    @endif
+
     @if ($tema === 'comercio')
         @if ($tagline)
             <p class="tagline">{{ $tagline }}</p>
@@ -293,9 +297,6 @@
             </div>
         @endif
     @else
-        @if ($descripcion)
-            <p @class(['description', 'description--unbroken' => preg_match('/\s/u', trim((string) $descripcion)) === 0])>{{ $descripcion }}</p>
-        @endif
         <x-paginas.contact-sections :address="$direccion" :phone="$telefono" :email="$correo" />
     @endif
 
@@ -304,11 +305,11 @@
             @php
                 $tipo = $enlace['tipo'] ?? 'web';
                 $enlaceLabel = ($enlace['etiqueta'] ?? null) ?: (($enlace['nombre'] ?? null) ?: \App\Support\LinkTypeHelper::label($tipo));
-                $copyText = !empty($enlace['copiar_texto']) ? ($enlace['texto_copia'] ?? '') : null;
+                $copyText = ($tipo === 'transferencia' || !empty($enlace['copiar_texto'])) ? ($enlace['texto_copia'] ?? '') : null;
                 $url = !empty($enlace['url']) ? $enlace['url'] : null;
                 $svg = \App\Support\LinkTypeHelper::iconSvg($tipo, 'w-5 h-5');
             @endphp
-            @if ($copyText)
+            @if ($tipo === 'transferencia' || $copyText)
                 <button @class(['link-button', 'link-button-review' => $tipo === 'review', 'link-button-whatsapp' => $tipo === 'whatsapp']) type="button" data-copy-text="{{ $copyText }}">
                     <span class="link-icon">
                         @if ($tema === 'comercio' && $tipo === 'transferencia' && $bankLogo)

@@ -25,7 +25,7 @@
                     if (!preview) return;
                     preview.addEventListener('click', async (event) => {
                         const button = event.target.closest('[data-copy-text]');
-                        if (!button) return;
+                        if (!button || !button.dataset.copyText.trim()) return;
                         try {
                             await navigator.clipboard.writeText(button.dataset.copyText);
                             const label = button.querySelector('.link-label');

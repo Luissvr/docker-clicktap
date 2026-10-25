@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Data\PaginaPublica;
 use App\Models\Pagina;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
@@ -10,6 +11,31 @@ use Tests\TestCase;
 class PublicPageExportTest extends TestCase
 {
     use LazilyRefreshDatabase;
+
+    public function test_export_keeps_empty_transfers_active_and_ignores_the_old_page_place_id(): void
+    {
+        $page = Pagina::factory()->create([
+            'tema' => 'comercio', 'activo' => true,
+            'contenido_extra' => ['place_id' => 'ChIJ_Obsoleto'],
+        ]);
+        $page->enlaces()->create([
+            'tipo' => 'transferencia', 'activo' => true, 'posicion' => 0,
+            'copiar_texto' => true, 'texto_copia' => null,
+        ]);
+        $page->enlaces()->create([
+            'tipo' => 'review', 'activo' => true, 'posicion' => 1,
+            'url' => 'https://search.google.com/local/writereview?placeid=ChIJ_Enlace',
+        ]);
+        $data = PaginaPublica::fromModel($page->load('enlaces'))->toArray();
+        $this->assertCount(2, $data['links']);
+        $this->assertFalse($data['links'][0]['isDisabled']);
+        $this->assertSame('', $data['links'][0]['copyText']);
+        $this->assertSame('https://search.google.com/local/writereview?placeid=ChIJ_Enlace', $data['links'][1]['href']);
+
+        $page->enlaces()->where('tipo', 'review')->delete();
+        $data = PaginaPublica::fromModel($page->load('enlaces'))->toArray();
+        $this->assertCount(1, $data['links']);
+    }
 
     public function test_export_only_includes_active_pages_and_public_content(): void
     {
