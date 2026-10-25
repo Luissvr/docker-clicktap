@@ -385,7 +385,7 @@ class PaginaResource extends Resource
                                             ->placeholder(fn (Forms\Get $get): string => $get('tipo') === 'transferencia'
                                                 ? "Nombre del titular\nRUT\nBanco y tipo de cuenta\nNúmero de cuenta\nCorreo"
                                                 : 'Escribe el texto que se copiará al pulsar el botón')
-                                            ->helperText(fn (Forms\Get $get): ?string => $get('tipo') === 'transferencia'
+                                            ->helperText(fn (Forms\Get $get): string => $get('tipo') === 'transferencia'
                                                 ? 'Estos datos se copiarán desde el botón público de transferencia.'
                                                 : 'El texto se copiará al pulsar el botón.')
                                             ->maxLength(5000)

@@ -549,6 +549,8 @@ nav.fi-sidebar-nav {
 }
 
 .fi-sidebar-item-icon {
+    width: 1.25rem !important;
+    height: 1.25rem !important;
     flex-shrink: 0 !important;
     margin-top: 0.125rem !important;
     color: #8C9681 !important;
@@ -721,6 +723,13 @@ nav.fi-sidebar-nav {
 .ct-editor-navigation { display: none; }
 .ct-draft-recovery { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; padding: .75rem; background: #f6f7f5; font-size: .875rem; }
 .ct-draft-recovery button { text-decoration: underline; min-height: 44px; color: #375500; }
+/* Responsive page editor and link cards. */
+.ct-page-editor-grid,
+.ct-page-editor-grid .fi-fo-component-ctn,
+.ct-page-editor-grid .fi-fo-repeater-item { min-width: 0; }
+.ct-page-editor-grid .fi-fo-repeater-item-header { flex-wrap: wrap; gap: .5rem; }
+.ct-page-editor-grid .fi-fo-repeater-item-content { min-width: 0; }
+.ct-page-editor-grid .fi-fo-field-wrp { min-width: 0; }
 @media (min-width: 1024px) {
     main:has(.ct-page-editor-grid) { max-width: none !important; padding-inline: 1.5rem !important; }
     .ct-page-editor-grid > .fi-fo-component-ctn { grid-template-columns: minmax(0, 1fr) 380px !important; align-items: start; gap: 1.25rem !important; }

@@ -455,7 +455,7 @@ class AdminPanelTest extends TestCase
             ->assertDontSee('srcdoc=', false)
             ->fillForm([
                 'nombre_publico' => 'Café Manual',
-                'descripcion' => 'Primera descripción',
+                'contenido_extra' => ['tagline' => 'Primera frase'],
             ])
             ->assertSet('compiledPagePreviewHtml', null)
             ->assertDontSee('srcdoc=', false);
@@ -465,13 +465,13 @@ class AdminPanelTest extends TestCase
             ->assertSee('srcdoc=', false);
 
         $firstPreview = $component->get('compiledPagePreviewHtml');
-        $this->assertStringContainsString('Primera descripción', $firstPreview);
+        $this->assertStringContainsString('Primera frase', $firstPreview);
 
         $component
-            ->set('data.descripcion', 'Descripción actualizada')
+            ->set('data.contenido_extra.tagline', 'Frase actualizada')
             ->callFormComponentAction('vista-previa-section', 'cargarPersonalizacion');
 
-        $this->assertStringContainsString('Descripción actualizada', $component->get('compiledPagePreviewHtml'));
+        $this->assertStringContainsString('Frase actualizada', $component->get('compiledPagePreviewHtml'));
     }
 
     public function test_edit_page_preview_loads_the_saved_page_only_when_requested(): void
