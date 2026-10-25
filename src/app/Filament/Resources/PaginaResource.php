@@ -41,6 +41,7 @@ class PaginaResource extends Resource
     {
         return $form->schema([
             Forms\Components\Grid::make(['default' => 1, 'xl' => 12])
+                ->extraAttributes(['class' => 'ct-page-editor-grid'])
                 ->schema([
                     Forms\Components\Group::make([
                         Forms\Components\Section::make('Página pública')
@@ -274,6 +275,14 @@ class PaginaResource extends Resource
                                             ->prefixIcon(fn (Forms\Get $get): string => LinkTypeHelper::heroicon($get('tipo')))
                                             ->required()
                                             ->live()
+                                            ->afterStateUpdated(function (?string $state, Forms\Get $get, Forms\Set $set): void {
+                                                if ($state === 'transferencia') {
+                                                    $set('copiar_texto', true);
+                                                    if (blank($get('etiqueta'))) {
+                                                        $set('etiqueta', 'Copiar datos de transferencia');
+                                                    }
+                                                }
+                                            })
                                             ->columnSpan(['default' => 1, 'md' => 1]),
                                         Forms\Components\TextInput::make('nombre')
                                             ->label('Nombre del enlace')
@@ -283,34 +292,81 @@ class PaginaResource extends Resource
                                             ->live(onBlur: true)
                                             ->columnSpan(['default' => 1, 'md' => 1]),
                                         Forms\Components\TextInput::make('etiqueta')
-                                            ->label('Texto del botón')
-                                            ->placeholder('Ej. Escríbenos, Síguenos...')
-                                            ->helperText('Visible en el botón público (opcional).')
+                                            ->label(fn (Forms\Get $get): string => match ($get('tipo')) {
+                                                'instagram' => 'Texto para Instagram',
+                                                'facebook' => 'Texto para Facebook',
+                                                'whatsapp' => 'Texto para WhatsApp',
+                                                'review' => 'Texto para reseñas',
+                                                'location' => 'Texto para ubicación',
+                                                default => 'Texto del botón',
+                                            })
+                                            ->placeholder(fn (Forms\Get $get): string => match ($get('tipo')) {
+                                                'instagram' => 'Ej. Síguenos en Instagram',
+                                                'facebook' => 'Ej. Visita nuestro Facebook',
+                                                'whatsapp' => 'Ej. Escríbenos por WhatsApp',
+                                                'review' => 'Ej. Déjanos una reseña',
+                                                'location' => 'Ej. Cómo llegar',
+                                                'transferencia' => 'Ej. Copiar datos de transferencia',
+                                                default => 'Ej. Visita nuestra página',
+                                            })
+                                            ->helperText(fn (Forms\Get $get): string => match ($get('tipo')) {
+                                                'review' => 'Si configuraste el Place ID de Google, el destino se genera automáticamente.',
+                                                'transferencia' => 'Este texto aparecerá en el botón que copia los datos.',
+                                                default => 'Texto visible en el botón público. Si lo dejas vacío, se usa el nombre del tipo.',
+                                            })
                                             ->maxLength(255)
+                                            ->live(onBlur: true)
                                             ->columnSpan(['default' => 1, 'md' => 1]),
                                         Forms\Components\TextInput::make('url')
-                                            ->label('Destino (URL)')
-                                            ->placeholder('https://...')
+                                            ->label(fn (Forms\Get $get): string => match ($get('tipo')) {
+                                                'instagram' => 'Perfil de Instagram (URL)',
+                                                'facebook' => 'Página de Facebook (URL)',
+                                                'whatsapp' => 'Enlace de WhatsApp (URL)',
+                                                'review' => 'Enlace de reseñas (URL)',
+                                                'location' => 'Ubicación (URL de Maps)',
+                                                default => 'Destino (URL)',
+                                            })
+                                            ->placeholder(fn (Forms\Get $get): string => match ($get('tipo')) {
+                                                'instagram' => 'https://instagram.com/tu-negocio',
+                                                'facebook' => 'https://facebook.com/tu-negocio',
+                                                'whatsapp' => 'https://wa.me/56912345678',
+                                                'review' => 'https://g.page/r/.../review',
+                                                'location' => 'https://maps.google.com/?q=...',
+                                                default => 'https://...',
+                                            })
                                             ->url()
                                             ->maxLength(2048)
-                                            ->helperText('Opcional si es botón de solo copiar.')
+                                            ->helperText(fn (Forms\Get $get): string => match ($get('tipo')) {
+                                                'whatsapp' => 'Incluye el código de país en el número de wa.me.',
+                                                'review' => 'Se reemplaza por el enlace automático cuando la página tiene un Place ID de Google.',
+                                                'location' => 'Pega un enlace compartido de Google Maps.',
+                                                default => (bool) $get('copiar_texto') ? 'Opcional si este botón solo copia texto.' : 'Pega el enlace completo, incluyendo https://.',
+                                            })
+                                            ->visible(fn (Forms\Get $get): bool => $get('tipo') !== 'transferencia')
                                             ->columnSpan(['default' => 1, 'md' => 1]),
                                         Forms\Components\Toggle::make('copiar_texto')
                                             ->label('Copiar texto al pulsar')
-                                            ->live(),
+                                            ->live()
+                                            ->visible(fn (Forms\Get $get): bool => $get('tipo') !== 'transferencia'),
                                         Forms\Components\Toggle::make('activo')
                                             ->label('Activo')
                                             ->default(true),
                                         Forms\Components\Textarea::make('texto_copia')
-                                            ->label('Texto a copiar')
-                                            ->placeholder('Escribe los datos que se copiarán en el portapapeles')
-                                            ->helperText('Puedes completarlo más adelante.')
+                                            ->label(fn (Forms\Get $get): string => $get('tipo') === 'transferencia' ? 'Datos de transferencia' : 'Texto a copiar')
+                                            ->placeholder(fn (Forms\Get $get): string => $get('tipo') === 'transferencia'
+                                                ? "Nombre del titular\nRUT\nBanco y tipo de cuenta\nNúmero de cuenta\nCorreo"
+                                                : 'Escribe el texto que se copiará al pulsar el botón')
+                                            ->helperText(fn (Forms\Get $get): string => $get('tipo') === 'transferencia'
+                                                ? 'Estos datos se copiarán desde el botón público de transferencia.'
+                                                : 'El texto se copiará al pulsar el botón.')
                                             ->maxLength(5000)
                                             ->rows(3)
-                                            ->visible(fn (Forms\Get $get): bool => (bool) $get('copiar_texto'))
+                                            ->live(debounce: 500)
+                                            ->required(fn (Forms\Get $get): bool => $get('tipo') === 'transferencia' && (bool) $get('activo'))
+                                            ->visible(fn (Forms\Get $get): bool => $get('tipo') === 'transferencia' || (bool) $get('copiar_texto'))
                                             ->columnSpanFull(),
                                     ])
-                                    ->columns(['default' => 1, 'md' => 2, 'xl' => 4])
+                                    ->columns(['default' => 1, 'md' => 2, 'xl' => 2])
                                     ->orderColumn('posicion')
                                     ->reorderableWithDragAndDrop(false)
                                     ->extraAttributes(fn (Component $livewire): array => [
@@ -376,7 +432,7 @@ class PaginaResource extends Resource
                                 Forms\Components\View::make('filament.components.pagina-live-preview'),
                             ])
                             ->collapsible(),
-                    ])->columnSpan(['default' => 12, 'xl' => 5]),
+                    ])->extraAttributes(['class' => 'ct-editor-preview'])->columnSpan(['default' => 12, 'xl' => 5]),
                 ]),
         ]);
     }
