@@ -8,6 +8,7 @@ services:
       LOCAL_DB_DATABASE: ${DB_DATABASE:-clicktap_db}
       LOCAL_DB_USERNAME: ${DB_USERNAME:-clicktap_user}
       LOCAL_DB_PASSWORD: ${DB_PASSWORD:-clicktap_secret}
+      LOCAL_DB_SCHEMA: clicktap_cache
     depends_on:
       db:
         condition: service_healthy
@@ -54,6 +55,7 @@ services:
       LOCAL_DB_DATABASE: ${DB_DATABASE:-clicktap_db}
       LOCAL_DB_USERNAME: ${DB_USERNAME:-clicktap_user}
       LOCAL_DB_PASSWORD: ${DB_PASSWORD:-clicktap_secret}
+      LOCAL_DB_SCHEMA: clicktap_cache
     depends_on:
       app:
         condition: service_healthy
