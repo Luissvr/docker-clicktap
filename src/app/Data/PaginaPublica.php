@@ -137,7 +137,7 @@ final readonly class PaginaPublica
             'type' => $type,
             'name' => trim((string) $enlace->nombre) ?: null,
             'icon' => match ($type) {
-                'whatsapp', 'instagram', 'facebook', 'review', 'location' => $type,
+                'whatsapp', 'instagram', 'tiktok', 'facebook', 'review', 'location' => $type,
                 default => 'contact',
             },
             'label' => trim((string) ($enlace->etiqueta ?: $enlace->nombre)) ?: self::defaultLabel($type),
@@ -153,6 +153,7 @@ final readonly class PaginaPublica
         return match ($type) {
             'whatsapp' => 'WhatsApp',
             'instagram' => 'Instagram',
+            'tiktok' => 'TikTok',
             'facebook' => 'Facebook',
             'review' => 'Escribir una reseña',
             'location' => 'Cómo llegar',

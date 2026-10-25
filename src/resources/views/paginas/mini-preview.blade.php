@@ -173,6 +173,7 @@
             margin-bottom: 14px;
             overflow-wrap: anywhere;
             text-align: justify;
+            white-space: pre-line;
         }
         .description--unbroken { text-justify: inter-character; }
         .details { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 16px; margin: 20px 0; text-align: left; }

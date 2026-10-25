@@ -325,6 +325,10 @@ class PaginaResource extends Resource
                                             ->required()
                                             ->live()
                                             ->afterStateUpdated(function (?string $state, Forms\Get $get, Forms\Set $set): void {
+                                                if ($state === 'review' && blank($get('url'))) {
+                                                    $set('url', 'https://search.google.com/local/writereview?placeid=');
+                                                }
+
                                                 if ($state === 'transferencia') {
                                                     $set('copiar_texto', true);
                                                     if (blank($get('etiqueta'))) {
