@@ -79,7 +79,33 @@ class PaginaResource extends Resource
                                     ->label('Correo')
                                     ->email()
                                     ->maxLength(255),
+                                Forms\Components\TextInput::make('contenido_extra.tagline')
+                                    ->label('Frase bajo el nombre')
+                                    ->maxLength(255)
+                                    ->helperText('Aparece debajo del título en la página pública.'),
+                                Forms\Components\Textarea::make('contenido_extra.schedule')
+                                    ->label('Horario')
+                                    ->rows(2)
+                                    ->maxLength(1000)
+                                    ->helperText('Se muestra debajo de ubicación y contacto.'),
+                                Forms\Components\TextInput::make('contenido_extra.place_id')
+                                    ->label('Place ID de Google')
+                                    ->maxLength(255)
+                                    ->live(debounce: 500)
+                                    ->helperText('Al ingresarlo, la vista previa genera el enlace para dejar una reseña en Google.'),
+                                Forms\Components\Select::make('contenido_extra.transfer_logo')
+                                    ->label('Logo en botones de transferencia')
+                                    ->options([
+                                        'none' => 'Sin logo',
+                                        'bancoestado' => 'BancoEstado',
+                                        'mercado-libre' => 'Mercado Libre',
+                                    ])
+                                    ->default('none')
+                                    ->helperText('Se utiliza en todos los enlaces configurados para copiar datos de transferencia.'),
+                                // Async Alpine removes x-ignore after loading. Keep it in the server HTML
+                                // (also on color pickers) so Livewire cannot initialize unloaded clones.
                                 Forms\Components\FileUpload::make('logo_path')
+                                    ->extraAlpineAttributes(['x-ignore' => ''])
                                     ->label('Logo o imagen principal')
                                     ->image()
                                     ->disk(fn (?Pagina $record): string => $record?->logo_disk ?? config('clicktap.media_disk', 'public'))
@@ -175,18 +201,10 @@ class PaginaResource extends Resource
                             ->schema([
                                 Forms\Components\Select::make('tema')
                                     ->label('Tema visual')
-                                    ->options([
-                                        'default' => 'Predeterminado',
-                                        'barber' => 'Barbería',
-                                        'floral' => 'Floral',
-                                        'china' => 'La Dinastía China',
-                                        'dona-flor' => 'Doña Flor',
-                                        'fulldrink' => 'Full Drink',
-                                        'marley' => 'El Bajón del Marley',
-                                        'recargas-ac' => 'Recargas A/C',
-                                    ])
-                                    ->default('default')
-                                    ->required(),
+                                    ->options(['comercio' => 'Comercio'])
+                                    ->default('comercio')
+                                    ->required()
+                                    ->live(),
                                 Forms\Components\Select::make('tipografia')
                                     ->label('Tipografía')
                                     ->options(TypographyHelper::options())
@@ -274,6 +292,14 @@ class PaginaResource extends Resource
                                             ->prefixIcon(fn (Forms\Get $get): string => LinkTypeHelper::heroicon($get('tipo')))
                                             ->required()
                                             ->live()
+                                            ->afterStateUpdated(function (?string $state, Forms\Get $get, Forms\Set $set): void {
+                                                if ($state === 'transferencia') {
+                                                    $set('copiar_texto', true);
+                                                    if (blank($get('etiqueta'))) {
+                                                        $set('etiqueta', 'Copiar datos de transferencia');
+                                                    }
+                                                }
+                                            })
                                             ->columnSpan(['default' => 1, 'md' => 1]),
                                         Forms\Components\TextInput::make('nombre')
                                             ->label('Nombre del enlace')
@@ -294,20 +320,28 @@ class PaginaResource extends Resource
                                             ->url()
                                             ->maxLength(2048)
                                             ->helperText('Opcional si es botón de solo copiar.')
+                                            ->visible(fn (Forms\Get $get): bool => $get('tipo') !== 'transferencia')
                                             ->columnSpan(['default' => 1, 'md' => 1]),
                                         Forms\Components\Toggle::make('copiar_texto')
                                             ->label('Copiar texto al pulsar')
-                                            ->live(),
+                                            ->live()
+                                            ->visible(fn (Forms\Get $get): bool => $get('tipo') !== 'transferencia'),
                                         Forms\Components\Toggle::make('activo')
                                             ->label('Activo')
                                             ->default(true),
                                         Forms\Components\Textarea::make('texto_copia')
-                                            ->label('Texto a copiar')
-                                            ->placeholder('Escribe los datos que se copiarán en el portapapeles')
-                                            ->helperText('Puedes completarlo más adelante.')
+                                            ->label(fn (Forms\Get $get): string => $get('tipo') === 'transferencia' ? 'Datos de transferencia' : 'Texto a copiar')
+                                            ->placeholder(fn (Forms\Get $get): string => $get('tipo') === 'transferencia'
+                                                ? "Nombre del titular\nRUT\nBanco y tipo de cuenta\nNúmero de cuenta\nCorreo"
+                                                : 'Escribe el texto que se copiará al pulsar el botón')
+                                            ->helperText(fn (Forms\Get $get): ?string => $get('tipo') === 'transferencia'
+                                                ? 'Estos datos se copiarán desde el botón público de transferencia.'
+                                                : 'El texto se copiará al pulsar el botón.')
                                             ->maxLength(5000)
                                             ->rows(3)
-                                            ->visible(fn (Forms\Get $get): bool => (bool) $get('copiar_texto'))
+                                            ->live(debounce: 500)
+                                            ->required(fn (Forms\Get $get): bool => $get('tipo') === 'transferencia' && (bool) $get('activo'))
+                                            ->visible(fn (Forms\Get $get): bool => $get('tipo') === 'transferencia' || (bool) $get('copiar_texto'))
                                             ->columnSpanFull(),
                                     ])
                                     ->columns(['default' => 1, 'md' => 2, 'xl' => 4])

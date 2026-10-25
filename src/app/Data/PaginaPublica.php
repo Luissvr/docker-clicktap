@@ -4,6 +4,7 @@ namespace App\Data;
 
 use App\Models\EnlacePagina;
 use App\Models\Pagina;
+use App\Support\LinkTypeHelper;
 use App\Support\PageAppearance;
 
 final readonly class PaginaPublica
@@ -18,6 +19,7 @@ final readonly class PaginaPublica
             throw new \InvalidArgumentException("La página {$pagina->slug} no tiene nombre público.");
         }
 
+        $extra = is_array($pagina->contenido_extra) ? $pagina->contenido_extra : [];
         $highlights = [];
         if ($address = trim((string) $pagina->direccion_publica)) {
             $highlights[] = ['id' => 'location', 'icon' => 'location', 'label' => 'Ubicación', 'value' => $address];
@@ -29,7 +31,18 @@ final readonly class PaginaPublica
             ->filter(fn (?string $value): bool => trim((string) $value) !== '')
             ->map(fn (?string $value): string => trim((string) $value))
             ->implode("\n");
-        if ($contact !== '') {
+        $contactDetails = [];
+        if ($contact !== '' && $pagina->tema === 'comercio') {
+            if ($phone !== '') {
+                $contactDetails[] = [
+                    'label' => $phone,
+                    'href' => 'tel:'.preg_replace('/[^\d+]/', '', $phone),
+                ];
+            }
+            if ($email !== '') {
+                $contactDetails[] = ['label' => $email, 'href' => 'mailto:'.$email];
+            }
+        } elseif ($contact !== '') {
             $highlights[] = [
                 'id' => 'contact',
                 'icon' => 'contact',
@@ -38,6 +51,40 @@ final readonly class PaginaPublica
                 'phone' => $phone ?: null,
                 'email' => $email ?: null,
             ];
+        }
+        if ($schedule = trim((string) ($extra['schedule'] ?? ''))) {
+            $highlights[] = ['id' => 'schedule', 'icon' => 'schedule', 'label' => 'Horario', 'value' => $schedule];
+        }
+        $transferLogo = match ($extra['transfer_logo'] ?? 'none') {
+            'bancoestado' => '/logo-bancoestado.svg',
+            'mercado-libre' => '/logo-mercado-libre.png',
+            default => null,
+        };
+
+        $links = $pagina->enlaces
+            ->where('activo', true)
+            ->map(fn (EnlacePagina $enlace): array => self::link($enlace, $transferLogo))
+            ->values()
+            ->all();
+        $placeId = trim((string) ($extra['place_id'] ?? ''));
+        $reviewUrl = $pagina->tema === 'comercio' ? LinkTypeHelper::reviewUrlFromPlaceId($placeId) : null;
+        if ($reviewUrl !== null) {
+            $reviewIndex = collect($links)->search(fn (array $link): bool => ($link['type'] ?? null) === 'review');
+            if ($reviewIndex === false) {
+                $links[] = [
+                    'type' => 'review',
+                    'name' => 'Reseña Google',
+                    'icon' => 'review',
+                    'label' => 'Dejar una reseña',
+                    'href' => $reviewUrl,
+                    'copyText' => null,
+                    'logo' => null,
+                    'isDisabled' => false,
+                ];
+            } else {
+                $links[$reviewIndex]['href'] = $reviewUrl;
+                $links[$reviewIndex]['isDisabled'] = false;
+            }
         }
 
         $appearance = PageAppearance::resolve([
@@ -50,7 +97,7 @@ final readonly class PaginaPublica
         return new self([
             'slug' => $pagina->slug,
             'name' => $name,
-            'tagline' => null,
+            'tagline' => trim((string) ($extra['tagline'] ?? '')) ?: null,
             'description' => trim((string) $pagina->descripcion),
             'theme' => $pagina->tema ?: 'default',
             'typography' => $pagina->tipografia ?: 'inter',
@@ -59,13 +106,10 @@ final readonly class PaginaPublica
             'logoLayout' => $pagina->logo_layout ?: 'original',
             'logoWidth' => (int) ($pagina->logo_width ?: 160),
             'favicon' => self::publicPath($pagina->logo_path) ?? '/favicon.png',
-            'footer' => null,
+            'footer' => $pagina->tema === 'comercio' ? '' : null,
             'highlights' => $highlights,
-            'links' => $pagina->enlaces
-                ->where('activo', true)
-                ->map(fn (EnlacePagina $enlace): array => self::link($enlace))
-                ->values()
-                ->all(),
+            'contactDetails' => $contactDetails,
+            'links' => $links,
             'colors' => [
                 'background' => $appearance['color_fondo'],
                 'text' => $appearance['color_texto'],
@@ -83,7 +127,7 @@ final readonly class PaginaPublica
     }
 
     /** @return array<string, mixed> */
-    private static function link(EnlacePagina $enlace): array
+    private static function link(EnlacePagina $enlace, ?string $transferLogo = null): array
     {
         $type = (string) $enlace->tipo;
         $url = trim((string) $enlace->url);
@@ -99,6 +143,7 @@ final readonly class PaginaPublica
             'label' => trim((string) ($enlace->etiqueta ?: $enlace->nombre)) ?: self::defaultLabel($type),
             'href' => $url !== '' ? $url : null,
             'copyText' => $copyText !== '' ? $copyText : null,
+            'logo' => $type === 'transferencia' ? $transferLogo : null,
             'isDisabled' => $url === '' && $copyText === '',
         ];
     }

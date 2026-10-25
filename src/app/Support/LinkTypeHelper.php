@@ -54,6 +54,15 @@ final class LinkTypeHelper
         };
     }
 
+    public static function reviewUrlFromPlaceId(?string $placeId): ?string
+    {
+        $placeId = trim((string) $placeId);
+
+        return $placeId === ''
+            ? null
+            : 'https://search.google.com/local/writereview?placeid='.rawurlencode($placeId);
+    }
+
     public static function iconSvg(?string $type, string $class = 'w-4 h-4'): string
     {
         return match ($type) {

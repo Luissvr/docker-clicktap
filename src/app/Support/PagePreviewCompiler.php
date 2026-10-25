@@ -19,6 +19,15 @@ final class PagePreviewCompiler
         $telefono = $data['telefono_publico'] ?? ($record?->telefono_publico ?? '');
         $correo = $data['correo_publico'] ?? ($record?->correo_publico ?? '');
         $tema = $data['tema'] ?? ($record?->tema ?? 'default');
+        $extra = $data['contenido_extra'] ?? ($record?->contenido_extra ?? []);
+        $extra = is_array($extra) ? $extra : [];
+        $tagline = $extra['tagline'] ?? '';
+        $schedule = $extra['schedule'] ?? '';
+        $bankLogo = match ($extra['transfer_logo'] ?? 'none') {
+            'bancoestado' => '/logo-bancoestado.svg',
+            'mercado-libre' => '/logo-mercado-libre.png',
+            default => null,
+        };
         $tipografia = $data['tipografia'] ?? ($record?->tipografia ?? 'inter');
         $colorFondo = $data['color_fondo'] ?? ($record?->color_fondo ?? '#ffffff');
         $colorTexto = $data['color_texto'] ?? ($record?->color_texto ?? '#000000');
@@ -36,6 +45,23 @@ final class PagePreviewCompiler
             ->filter(fn ($item) => ($item['activo'] ?? true))
             ->values()
             ->all();
+        $placeId = trim((string) ($extra['place_id'] ?? ''));
+        $reviewUrl = $tema === 'comercio' ? LinkTypeHelper::reviewUrlFromPlaceId($placeId) : null;
+        if ($reviewUrl !== null) {
+            $reviewIndex = collect($enlaces)->search(fn (array $enlace): bool => ($enlace['tipo'] ?? null) === 'review');
+            if ($reviewIndex === false) {
+                $enlaces[] = [
+                    'tipo' => 'review',
+                    'nombre' => 'Reseña Google',
+                    'etiqueta' => 'Dejar una reseña',
+                    'url' => $reviewUrl,
+                    'activo' => true,
+                ];
+            } else {
+                $enlaces[$reviewIndex]['url'] = $reviewUrl;
+                $enlaces[$reviewIndex]['activo'] = true;
+            }
+        }
 
         $logoState = $data['logo_path'] ?? ($record?->logo_path ?? null);
         $logoUrl = self::resolveLogoUrl($logoState, $record);
@@ -50,6 +76,9 @@ final class PagePreviewCompiler
             'telefono' => $telefono,
             'correo' => $correo,
             'tema' => $tema,
+            'tagline' => $tagline,
+            'schedule' => $schedule,
+            'bankLogo' => $bankLogo,
             'tipografia' => $tipografia,
             'colorFondo' => $appearance['color_fondo'],
             'colorTexto' => $appearance['color_texto'],

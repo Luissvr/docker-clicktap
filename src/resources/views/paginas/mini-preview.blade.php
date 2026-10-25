@@ -17,6 +17,7 @@
             --button: {{ $colorBoton }};
             --button-text: {{ $colorTextoBoton }};
             --accent: {{ $colorAcento }};
+            --muted: {{ $colorTexto }};
             --logo-width: {{ $logoWidth }}px;
             --font-family: {!! $fontFamily !!};
         }
@@ -61,6 +62,63 @@
             z-index: 1;
             max-width: 360px;
             margin: 0 auto;
+        }
+        body.theme-comercio {
+            padding: 12px 12px 20px;
+            text-align: left;
+            background: radial-gradient(circle at 50% -4%, rgba(61, 122, 173, .27), transparent 28rem), linear-gradient(180deg, #0b1b2d, #081321 36rem);
+            background-color: #081321;
+            color: #f6f9fd;
+        }
+        html:has(body.theme-comercio) { background: #081321; }
+        .theme-comercio .content { max-width: 496px; text-align: left; }
+        .theme-comercio .logo-wrap { width: 100%; min-height: 0; margin: 0 auto 12px; }
+        .theme-comercio .logo-img:not(.logo-img--round):not(.logo-img--rounded) {
+            width: 100%; max-height: none; height: auto; border-radius: 14px;
+        }
+        .theme-comercio .logo-img--round { width: min(var(--logo-width), 100%); margin: 0 auto; }
+        .theme-comercio .logo-img--rounded {
+            width: min(var(--logo-width), 100%); height: auto; aspect-ratio: 1; margin: 0 auto;
+            border-radius: 16px; background: #fff; padding: 7px; object-fit: contain;
+        }
+        .theme-comercio h1 {
+            color: #f7f9fc; font-family: "Aptos Display", "Segoe UI Variable Display", "Segoe UI", sans-serif;
+            font-size: clamp(27px, 6.5vw, 34px); font-weight: 700; line-height: 1.13;
+            letter-spacing: -.035em; text-wrap: balance; margin: 0 0 6px; text-align: center;
+        }
+        .theme-comercio h1::after {
+            content: ''; display: block; width: 56px; height: 3px; margin: 8px auto 0;
+            border-radius: 999px; background: linear-gradient(90deg, #ee786e, #8bbbd9);
+        }
+        .theme-comercio .tagline {
+            margin: 0 auto 10px; color: #b9cadb; text-align: center; font-size: 15px;
+            line-height: 1.45; overflow-wrap: anywhere;
+        }
+        .theme-comercio .details {
+            display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 9px;
+            align-items: start; margin: 10px 0; text-align: left;
+        }
+        .theme-comercio .detail-section { gap: 8px; min-width: 0; padding: 6px 3px; }
+        .theme-comercio .detail-icon { width: 19px; height: 19px; color: #ff8b7f; }
+        .theme-comercio .detail-content { min-width: 0; font-size: 13px; color: #f6f9fd; overflow-wrap: anywhere; }
+        .theme-comercio .detail-content h2 { margin: 0 0 5px; color: #ff8b7f; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+        .theme-comercio .detail-content p { margin: 0; white-space: pre-line; }
+        .theme-comercio .detail-content a { display: block; color: inherit; text-decoration: none; overflow-wrap: anywhere; }
+        .theme-comercio .detail-schedule { grid-column: 1 / -1; }
+        .theme-comercio .links { gap: 8px; margin: 10px auto 0; width: 100%; }
+        .theme-comercio .link-button { display: flex; justify-content: center; gap: 10px; min-height: 48px; padding: 10px 15px; border: 1px solid rgba(139, 187, 217, .48); border-radius: 14px; background: linear-gradient(115deg, rgba(244, 107, 94, .14), rgba(139, 187, 217, .2)), #122a43; color: #f6f9fd; font-size: 16px; }
+        .theme-comercio .link-button:hover { border-color: rgba(244, 139, 127, .78); background: linear-gradient(115deg, rgba(244, 107, 94, .24), rgba(139, 187, 217, .28)), #1b3b59; }
+        .theme-comercio .link-button-whatsapp { border-color: rgba(37, 211, 102, .48); background: linear-gradient(135deg, rgba(37, 211, 102, .2), #122a43 86%); }
+        .theme-comercio .link-button-whatsapp:hover { border-color: rgba(37, 211, 102, .72); background: linear-gradient(135deg, rgba(37, 211, 102, .29), #173851 86%); }
+        .theme-comercio .link-button.link-button-review { position: relative; min-height: 48px; padding-inline: 2.8rem; border-color: rgba(251, 188, 4, .58); background: linear-gradient(115deg, rgba(251, 188, 4, .2), rgba(244, 107, 94, .12)), #122a43; font-size: 14px; }
+        .theme-comercio .link-button-review .link-icon { position: absolute; top: 50%; left: 1rem; transform: translateY(-50%); }
+        .theme-comercio .link-button-review .link-icon svg { color: #facc15; }
+        .theme-comercio .link-label { width: auto; padding: 0; line-height: 1.25; white-space: normal; overflow: visible; text-overflow: clip; }
+        .theme-comercio .transfer-logo { width: 32px; height: 32px; object-fit: contain; border-radius: 4px; background: #fff; }
+        .theme-comercio .footer-brand { display: none; }
+        @media (max-width: 350px) {
+            .theme-comercio .details { grid-template-columns: minmax(0, 1fr); gap: 0; }
+            .theme-comercio .detail-schedule { grid-column: 1; }
         }
         .badge-preview {
             display: inline-block;
@@ -207,11 +265,41 @@
 
     <h1>{{ $nombre ?: 'Nombre del negocio' }}</h1>
 
-    @if ($descripcion)
-        <p @class(['description', 'description--unbroken' => preg_match('/\s/u', trim((string) $descripcion)) === 0])>{{ $descripcion }}</p>
+    @if ($tema === 'comercio')
+        @if ($tagline)
+            <p class="tagline">{{ $tagline }}</p>
+        @endif
+        @if ($direccion || $telefono || $correo || $schedule)
+            <div class="details" aria-label="Ubicación y contacto">
+                @if ($direccion)
+                    <section class="detail-section detail-location" aria-labelledby="detail-location">
+                        <svg class="detail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 5.2-8 11-8 11S4 15.2 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.8"/></svg>
+                        <div class="detail-content"><h2 id="detail-location">Ubicación</h2><p>{{ $direccion }}</p></div>
+                    </section>
+                @endif
+                @if ($telefono || $correo)
+                    <section class="detail-section detail-contact" aria-labelledby="detail-contact">
+                        <svg class="detail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2A19.8 19.8 0 0 1 3.1 5.2 2 2 0 0 1 5.1 3h3a2 2 0 0 1 2 1.7l.5 2.8a2 2 0 0 1-.6 1.8L8.2 11a16 16 0 0 0 4.8 4.8l1.7-1.8a2 2 0 0 1 1.8-.6l2.8.5a2 2 0 0 1 1.7 2Z"/></svg>
+                        <div class="detail-content"><h2 id="detail-contact">Contacto</h2>
+                            @if ($telefono)<a href="tel:{{ preg_replace('/[^\d+]/', '', $telefono) }}">{{ $telefono }}</a>@endif
+                            @if ($correo)<a href="mailto:{{ $correo }}">{{ $correo }}</a>@endif
+                        </div>
+                    </section>
+                @endif
+                @if ($schedule)
+                    <section class="detail-section detail-schedule" aria-labelledby="detail-schedule">
+                        <svg class="detail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg>
+                        <div class="detail-content"><h2 id="detail-schedule">Horario</h2><p>{{ $schedule }}</p></div>
+                    </section>
+                @endif
+            </div>
+        @endif
+    @else
+        @if ($descripcion)
+            <p @class(['description', 'description--unbroken' => preg_match('/\s/u', trim((string) $descripcion)) === 0])>{{ $descripcion }}</p>
+        @endif
+        <x-paginas.contact-sections :address="$direccion" :phone="$telefono" :email="$correo" />
     @endif
-
-    <x-paginas.contact-sections :address="$direccion" :phone="$telefono" :email="$correo" />
 
     <nav class="links">
         @forelse ($enlaces as $enlace)
@@ -223,17 +311,23 @@
                 $svg = \App\Support\LinkTypeHelper::iconSvg($tipo, 'w-5 h-5');
             @endphp
             @if ($copyText)
-                <button class="link-button" type="button" data-copy-text="{{ $copyText }}">
-                    <span class="link-icon">{!! $svg !!}</span>
+                <button @class(['link-button', 'link-button-review' => $tipo === 'review', 'link-button-whatsapp' => $tipo === 'whatsapp']) type="button" data-copy-text="{{ $copyText }}">
+                    <span class="link-icon">
+                        @if ($tema === 'comercio' && $tipo === 'transferencia' && $bankLogo)
+                            <img class="transfer-logo" src="{{ $bankLogo }}" alt="">
+                        @else
+                            {!! $svg !!}
+                        @endif
+                    </span>
                     <span class="link-label">{{ $enlaceLabel }}</span>
                 </button>
             @elseif ($url)
-                <a class="link-button" href="{{ $url }}" target="_blank" rel="noopener noreferrer">
+                <a @class(['link-button', 'link-button-review' => $tipo === 'review', 'link-button-whatsapp' => $tipo === 'whatsapp']) href="{{ $url }}" target="_blank" rel="noopener noreferrer">
                     <span class="link-icon">{!! $svg !!}</span>
                     <span class="link-label">{{ $enlaceLabel }}</span>
                 </a>
             @else
-                <span class="link-button link-button--disabled">
+                <span @class(['link-button', 'link-button--disabled', 'link-button-review' => $tipo === 'review', 'link-button-whatsapp' => $tipo === 'whatsapp'])>
                     <span class="link-icon">{!! $svg !!}</span>
                     <span class="link-label">{{ $enlaceLabel }}</span>
                 </span>
@@ -245,22 +339,11 @@
         @endforelse
     </nav>
 
-    <div class="footer-brand">
-        CLICKTAP
-    </div>
+    @if ($tema !== 'comercio')
+        <div class="footer-brand">
+            CLICKTAP
+        </div>
+    @endif
 </div>
-<script>
-    document.addEventListener('click', async (event) => {
-        const button = event.target.closest('[data-copy-text]');
-        if (!button) return;
-        try {
-            await navigator.clipboard.writeText(button.dataset.copyText);
-            const labelSpan = button.querySelector('.link-label');
-            const originalLabel = labelSpan ? labelSpan.textContent : button.textContent;
-            if (labelSpan) labelSpan.textContent = '¡Copiado!';
-            setTimeout(() => { if (labelSpan) labelSpan.textContent = originalLabel; }, 1500);
-        } catch (e) {}
-    });
-</script>
 </body>
 </html>
