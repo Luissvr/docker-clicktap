@@ -48,4 +48,14 @@ final class TransferBank
 
         return 'data:image/svg+xml;charset=UTF-8,'.rawurlencode($svg);
     }
+
+    public static function publicLogo(?string $bank): ?string
+    {
+        return match (trim((string) $bank)) {
+            'bancoestado' => '/logo-bancoestado.svg',
+            'banco-de-chile' => '/logo-banco-de-chile.png',
+            'mercado-libre' => '/logo-mercado-libre.png',
+            default => self::logo($bank),
+        };
+    }
 }

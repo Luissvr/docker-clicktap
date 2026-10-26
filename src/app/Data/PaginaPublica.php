@@ -55,7 +55,7 @@ final readonly class PaginaPublica
         if ($schedule = trim((string) ($extra['schedule'] ?? ''))) {
             $highlights[] = ['id' => 'schedule', 'icon' => 'schedule', 'label' => 'Horario', 'value' => $schedule];
         }
-        $fallbackTransferLogo = TransferBank::logo($extra['transfer_logo'] ?? 'none');
+        $fallbackTransferLogo = TransferBank::publicLogo($extra['transfer_logo'] ?? 'none');
 
         $links = $pagina->enlaces
             ->where('activo', true)
@@ -120,7 +120,7 @@ final readonly class PaginaPublica
             'href' => $url !== '' ? $url : null,
             'copyText' => $type === 'transferencia' || $copyText !== '' ? $copyText : null,
             'logo' => $type === 'transferencia'
-                ? (TransferBank::logo($enlace->banco_transferencia) ?? $fallbackTransferLogo)
+                ? (TransferBank::publicLogo($enlace->banco_transferencia) ?? $fallbackTransferLogo)
                 : null,
             'isDisabled' => $type !== 'transferencia' && $url === '' && $copyText === '',
         ];
