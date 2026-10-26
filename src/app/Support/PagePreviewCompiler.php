@@ -23,7 +23,7 @@ final class PagePreviewCompiler
         $extra = is_array($extra) ? $extra : [];
         $tagline = $extra['tagline'] ?? '';
         $schedule = $extra['schedule'] ?? '';
-        $bankLogo = TransferBank::logo($extra['transfer_logo'] ?? 'none');
+        $bankLogo = TransferBank::publicLogo($extra['transfer_logo'] ?? 'none');
         $tipografia = $data['tipografia'] ?? ($record?->tipografia ?? 'inter');
         $colorFondo = $data['color_fondo'] ?? ($record?->color_fondo ?? '#ffffff');
         $colorTexto = $data['color_texto'] ?? ($record?->color_texto ?? '#000000');
@@ -48,7 +48,7 @@ final class PagePreviewCompiler
                 }
 
                 if (($item['tipo'] ?? null) === 'transferencia') {
-                    $item['transfer_logo'] = TransferBank::logo($item['banco_transferencia'] ?? $extra['transfer_logo'] ?? 'none') ?? $bankLogo;
+                    $item['transfer_logo'] = TransferBank::publicLogo($item['banco_transferencia'] ?? $extra['transfer_logo'] ?? 'none') ?? $bankLogo;
                 }
 
                 return $item;
