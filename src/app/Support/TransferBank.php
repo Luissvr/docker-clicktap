@@ -52,8 +52,18 @@ final class TransferBank
     public static function publicLogo(?string $bank): ?string
     {
         return match (trim((string) $bank)) {
-            'bancoestado' => '/logo-bancoestado.svg',
-            'banco-de-chile' => '/logo-banco-de-chile.png',
+            'bancoestado' => '/bank-logos/bancoestado.png',
+            'banco-de-chile' => '/bank-logos/banco-de-chile.png',
+            'santander' => '/bank-logos/santander.png',
+            'bci' => '/bank-logos/bci.png',
+            'itau' => '/bank-logos/itau.png',
+            'scotiabank' => '/bank-logos/scotiabank.png',
+            'falabella' => '/bank-logos/falabella.png',
+            'bice' => '/bank-logos/bice.png',
+            'ripley' => '/bank-logos/ripley.png',
+            'security' => '/bank-logos/security.png',
+            'consorcio' => '/bank-logos/consorcio.png',
+            'mercado-pago' => '/bank-logos/mercado-pago.png',
             'mercado-libre' => '/logo-mercado-libre.png',
             default => self::logo($bank),
         };
