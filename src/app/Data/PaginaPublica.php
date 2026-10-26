@@ -5,6 +5,7 @@ namespace App\Data;
 use App\Models\EnlacePagina;
 use App\Models\Pagina;
 use App\Support\PageAppearance;
+use App\Support\TransferBank;
 
 final readonly class PaginaPublica
 {
@@ -54,11 +55,7 @@ final readonly class PaginaPublica
         if ($schedule = trim((string) ($extra['schedule'] ?? ''))) {
             $highlights[] = ['id' => 'schedule', 'icon' => 'schedule', 'label' => 'Horario', 'value' => $schedule];
         }
-        $transferLogo = match ($extra['transfer_logo'] ?? 'none') {
-            'bancoestado' => '/logo-bancoestado.svg',
-            'mercado-libre' => '/logo-mercado-libre.png',
-            default => null,
-        };
+        $transferLogo = TransferBank::logo($extra['transfer_logo'] ?? 'none');
 
         $links = $pagina->enlaces
             ->where('activo', true)

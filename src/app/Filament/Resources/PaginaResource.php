@@ -9,6 +9,7 @@ use App\Support\LogoPalette;
 use App\Support\PageAppearance;
 use App\Support\PageDescription;
 use App\Support\PublicationQueue;
+use App\Support\TransferBank;
 use App\Support\TypographyHelper;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -94,11 +95,7 @@ class PaginaResource extends Resource
                                     ->helperText('Se muestra debajo de ubicación y contacto.'),
                                 Forms\Components\Select::make('contenido_extra.transfer_logo')
                                     ->label('Logo en botones de transferencia')
-                                    ->options([
-                                        'none' => 'Sin logo',
-                                        'bancoestado' => 'BancoEstado',
-                                        'mercado-libre' => 'Mercado Libre',
-                                    ])
+                                    ->options(TransferBank::options())
                                     ->default('none')
                                     ->helperText('Se utiliza en todos los enlaces configurados para copiar datos de transferencia.'),
                                 // Async Alpine removes x-ignore after loading. Keep it in the server HTML

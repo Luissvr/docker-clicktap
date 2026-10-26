@@ -23,4 +23,12 @@ final class PublicPageExporter
                 ->all(),
         ];
     }
+
+    /** @return array<string, mixed> */
+    public function page(Pagina $pagina): array
+    {
+        $pagina->load(['enlaces' => fn ($query) => $query->useWritePdo()]);
+
+        return PaginaPublica::fromModel($pagina)->toArray();
+    }
 }

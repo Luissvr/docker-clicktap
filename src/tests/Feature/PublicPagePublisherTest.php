@@ -28,6 +28,9 @@ class PublicPagePublisherTest extends TestCase
             return match (true) {
                 str_ends_with($request->url(), '/git/ref/heads/main') => Http::response(['object' => ['sha' => 'head']], 200),
                 str_ends_with($request->url(), '/git/commits/head') => Http::response(['tree' => ['sha' => 'tree']], 200),
+                str_contains($request->url(), '/contents/src/data/generated/pages.json') => Http::response([
+                    'content' => base64_encode(json_encode(['version' => 1, 'pages' => []])),
+                ], 200),
                 str_ends_with($request->url(), '/git/blobs') => Http::response(['sha' => 'blob-'.md5($request->body())], 201),
                 str_ends_with($request->url(), '/git/trees') => Http::response(['sha' => 'tree-new'], 201),
                 str_ends_with($request->url(), '/git/commits') => Http::response(['sha' => 'commit-new'], 201),

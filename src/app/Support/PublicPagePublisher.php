@@ -43,7 +43,11 @@ final class PublicPagePublisher
             $baseUrl = $apiUrl.'/repos/'.$repository;
             $head = $client->get($baseUrl.'/git/ref/heads/'.$branch)->throw()->json('object.sha');
             $baseTree = $client->get($baseUrl.'/git/commits/'.$head)->throw()->json('tree.sha');
-            [$payload, $logos] = $this->payloadAndLogos();
+            $payload = $this->mergePageIntoContract(
+                $this->readContract($client, $baseUrl, $branch),
+                $pagina,
+            );
+            $logos = $this->pageLogo($pagina);
             $contract = json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)."\n";
             $entries = [[
                 'path' => 'src/data/generated/pages.json',
@@ -106,41 +110,68 @@ final class PublicPagePublisher
         return "{$action} página \"{$name}\" ({$pagina->slug})";
     }
 
-    /** @return array{0: array<string, mixed>, 1: list<array{path: string, contents: string}>} */
-    private function payloadAndLogos(): array
+    /** @return array<string, mixed> */
+    private function readContract(PendingRequest $client, string $baseUrl, string $branch): array
     {
-        $payload = $this->exporter->payload();
-        $logos = [];
-        $disks = Pagina::query()->whereIn('slug', array_column($payload['pages'], 'slug'))->pluck('logo_disk', 'slug');
+        $response = $client->get($baseUrl.'/contents/src/data/generated/pages.json', ['ref' => $branch])->throw();
+        $content = base64_decode((string) $response->json('content'), true);
+        if ($content === false) {
+            throw new RuntimeException('No se pudo leer el catálogo actual del repositorio.');
+        }
 
-        foreach ($payload['pages'] as &$page) {
-            $logo = $page['logo'] ?? null;
-            if (! is_string($logo) || ! str_starts_with($logo, '/storage/')) {
-                continue;
-            }
+        $payload = json_decode($content, true);
+        if (! is_array($payload) || ! isset($payload['pages']) || ! is_array($payload['pages'])) {
+            throw new RuntimeException('El catálogo actual del repositorio no tiene un formato válido.');
+        }
 
-            $source = ltrim(Str::after($logo, '/storage/'), '/');
-            $disk = Storage::disk($disks->get($page['slug']));
-            if (! $disk->exists($source)) {
-                throw new RuntimeException("No se encontró el logo público: {$source}.");
-            }
+        return $payload;
+    }
 
-            $extension = strtolower(pathinfo($source, PATHINFO_EXTENSION)) ?: 'bin';
-            if (! in_array($extension, ['png', 'jpg', 'jpeg', 'webp', 'gif', 'svg'], true)) {
-                throw new RuntimeException("Formato de logo no permitido: .{$extension}.");
-            }
-
-            $path = 'public/generated/logos/'.$page['slug'].'.'.$extension;
-            $logos[] = ['path' => $path, 'contents' => $disk->get($source)];
-            $publicLogo = '/generated/logos/'.$page['slug'].'.'.$extension;
+    /** @return array<string, mixed> */
+    private function mergePageIntoContract(array $payload, Pagina $pagina): array
+    {
+        $page = $this->exporter->page($pagina);
+        if (is_string($page['logo'] ?? null) && str_starts_with($page['logo'], '/storage/')) {
+            $extension = strtolower(pathinfo($pagina->logo_path, PATHINFO_EXTENSION)) ?: 'bin';
+            $publicLogo = '/generated/logos/'.$pagina->slug.'.'.$extension;
             $page['logo'] = $publicLogo;
             if (is_string($page['favicon'] ?? null) && str_starts_with($page['favicon'], '/storage/')) {
                 $page['favicon'] = $publicLogo;
             }
         }
-        unset($page);
+        $pages = collect($payload['pages'])
+            ->reject(fn (mixed $existing): bool => is_array($existing) && ($existing['slug'] ?? null) === $page['slug'])
+            ->push($page)
+            ->sortBy('slug')
+            ->values()
+            ->all();
 
-        return [$payload, $logos];
+        return ['version' => (int) ($payload['version'] ?? 1), 'pages' => $pages];
+    }
+
+    /** @return list<array{path: string, contents: string}> */
+    private function pageLogo(Pagina $pagina): array
+    {
+        $logo = $pagina->logo_path;
+        if (! is_string($logo) || trim($logo) === '' || preg_match('/^https?:\/\//i', $logo) === 1) {
+            return [];
+        }
+
+        $source = ltrim($logo, '/');
+        $disk = Storage::disk($pagina->logo_disk);
+        if (! $disk->exists($source)) {
+            throw new RuntimeException("No se encontró el logo público: {$source}.");
+        }
+
+        $extension = strtolower(pathinfo($source, PATHINFO_EXTENSION)) ?: 'bin';
+        if (! in_array($extension, ['png', 'jpg', 'jpeg', 'webp', 'gif', 'svg'], true)) {
+            throw new RuntimeException("Formato de logo no permitido: .{$extension}.");
+        }
+
+        return [[
+            'path' => 'public/generated/logos/'.$pagina->slug.'.'.$extension,
+            'contents' => $disk->get($source),
+        ]];
     }
 
     private function client(string $token): PendingRequest

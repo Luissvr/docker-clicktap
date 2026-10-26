@@ -23,11 +23,7 @@ final class PagePreviewCompiler
         $extra = is_array($extra) ? $extra : [];
         $tagline = $extra['tagline'] ?? '';
         $schedule = $extra['schedule'] ?? '';
-        $bankLogo = match ($extra['transfer_logo'] ?? 'none') {
-            'bancoestado' => '/logo-bancoestado.svg',
-            'mercado-libre' => '/logo-mercado-libre.png',
-            default => null,
-        };
+        $bankLogo = TransferBank::logo($extra['transfer_logo'] ?? 'none');
         $tipografia = $data['tipografia'] ?? ($record?->tipografia ?? 'inter');
         $colorFondo = $data['color_fondo'] ?? ($record?->color_fondo ?? '#ffffff');
         $colorTexto = $data['color_texto'] ?? ($record?->color_texto ?? '#000000');
