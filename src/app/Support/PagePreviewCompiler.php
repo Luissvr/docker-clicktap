@@ -39,12 +39,16 @@ final class PagePreviewCompiler
 
         $enlaces = collect($rawEnlaces)
             ->filter(fn ($item) => ($item['activo'] ?? true))
-            ->map(function (array $item): array {
+            ->map(function (array $item) use ($extra, $bankLogo): array {
                 if (($item['tipo'] ?? null) === 'review') {
                     if (array_key_exists('place_id', $item)) {
                         $item['url'] = LinkTypeHelper::reviewUrlFromPlaceId($item['place_id']);
                     }
                     $item['copiar_texto'] = false;
+                }
+
+                if (($item['tipo'] ?? null) === 'transferencia') {
+                    $item['transfer_logo'] = TransferBank::logo($item['banco_transferencia'] ?? $extra['transfer_logo'] ?? 'none') ?? $bankLogo;
                 }
 
                 return $item;

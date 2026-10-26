@@ -55,11 +55,11 @@ final readonly class PaginaPublica
         if ($schedule = trim((string) ($extra['schedule'] ?? ''))) {
             $highlights[] = ['id' => 'schedule', 'icon' => 'schedule', 'label' => 'Horario', 'value' => $schedule];
         }
-        $transferLogo = TransferBank::logo($extra['transfer_logo'] ?? 'none');
+        $fallbackTransferLogo = TransferBank::logo($extra['transfer_logo'] ?? 'none');
 
         $links = $pagina->enlaces
             ->where('activo', true)
-            ->map(fn (EnlacePagina $enlace): array => self::link($enlace, $transferLogo))
+            ->map(fn (EnlacePagina $enlace): array => self::link($enlace, $fallbackTransferLogo))
             ->values()
             ->all();
 
@@ -103,7 +103,7 @@ final readonly class PaginaPublica
     }
 
     /** @return array<string, mixed> */
-    private static function link(EnlacePagina $enlace, ?string $transferLogo = null): array
+    private static function link(EnlacePagina $enlace, ?string $fallbackTransferLogo = null): array
     {
         $type = (string) $enlace->tipo;
         $url = $type === 'transferencia' ? '' : trim((string) $enlace->url);
@@ -119,7 +119,9 @@ final readonly class PaginaPublica
             'label' => trim((string) ($enlace->etiqueta ?: $enlace->nombre)) ?: self::defaultLabel($type),
             'href' => $url !== '' ? $url : null,
             'copyText' => $type === 'transferencia' || $copyText !== '' ? $copyText : null,
-            'logo' => $type === 'transferencia' ? $transferLogo : null,
+            'logo' => $type === 'transferencia'
+                ? (TransferBank::logo($enlace->banco_transferencia) ?? $fallbackTransferLogo)
+                : null,
             'isDisabled' => $type !== 'transferencia' && $url === '' && $copyText === '',
         ];
     }

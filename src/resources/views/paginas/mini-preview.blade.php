@@ -312,8 +312,8 @@
             @if ($tipo === 'transferencia' || $copyText)
                 <button @class(['link-button', 'link-button-review' => $tipo === 'review', 'link-button-whatsapp' => $tipo === 'whatsapp']) type="button" data-copy-text="{{ $copyText }}">
                     <span class="link-icon">
-                        @if ($tema === 'comercio' && $tipo === 'transferencia' && $bankLogo)
-                            <img class="transfer-logo" src="{{ $bankLogo }}" alt="">
+                        @if ($tipo === 'transferencia' && ($enlace['transfer_logo'] ?? $bankLogo))
+                            <img class="transfer-logo" src="{{ $enlace['transfer_logo'] ?? $bankLogo }}" alt="">
                         @else
                             {!! $svg !!}
                         @endif

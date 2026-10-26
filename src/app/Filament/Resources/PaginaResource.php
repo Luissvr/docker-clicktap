@@ -342,6 +342,13 @@ class PaginaResource extends Resource
                                             ->maxLength(255)
                                             ->live(onBlur: true)
                                             ->columnSpan(['default' => 1, 'md' => 1]),
+                                        Forms\Components\Select::make('banco_transferencia')
+                                            ->label('Banco del botón')
+                                            ->options(TransferBank::options())
+                                            ->default('none')
+                                            ->helperText('El distintivo se mostrará dentro de este botón de transferencia.')
+                                            ->visible(fn (Forms\Get $get): bool => $get('tipo') === 'transferencia')
+                                            ->dehydratedWhenHidden(),
                                         Forms\Components\TextInput::make('etiqueta')
                                             ->label(fn (Forms\Get $get): string => match ($get('tipo')) {
                                                 'instagram' => 'Texto para Instagram',
