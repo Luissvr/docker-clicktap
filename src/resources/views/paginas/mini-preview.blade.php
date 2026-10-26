@@ -181,7 +181,7 @@
         .detail-icon { flex: none; width: 18px; height: 18px; color: var(--accent); }
         .detail-content { min-width: 0; font-size: 12px; overflow-wrap: anywhere; }
         .detail-content h2 { margin: 0 0 5px; color: var(--accent); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
-        .detail-content p { margin: 0; }
+        .detail-content p { margin: 0; white-space: pre-line; }
         .detail-content a { display: block; color: inherit; text-decoration: none; }
         .detail-content a + a { margin-top: 4px; }
         .links {

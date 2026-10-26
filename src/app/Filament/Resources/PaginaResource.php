@@ -73,9 +73,11 @@ class PaginaResource extends Resource
                                     ->helperText('Máximo 150 palabras. Se mostrará con texto justificado.')
                                     ->rules([new PageDescription])
                                     ->columnSpanFull(),
-                                Forms\Components\TextInput::make('direccion_publica')
+                                Forms\Components\Textarea::make('direccion_publica')
                                     ->label('Dirección')
-                                    ->maxLength(255),
+                                    ->rows(2)
+                                    ->maxLength(255)
+                                    ->helperText('Puedes usar saltos de línea; se conservarán en la página publicada.'),
                                 Forms\Components\TextInput::make('telefono_publico')
                                     ->label('Teléfono')
                                     ->tel()

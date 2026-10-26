@@ -57,7 +57,7 @@
         .detail-icon { flex: none; width: 21px; height: 21px; color: var(--accent); }
         .detail-content { min-width: 0; overflow-wrap: anywhere; }
         .detail-content h2 { margin: 0 0 8px; color: var(--accent); font-size: 15px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
-        .detail-content p { margin: 0; }
+        .detail-content p { margin: 0; white-space: pre-line; }
         .detail-content a { display: block; color: inherit; text-decoration: none; }
         .detail-content a + a { margin-top: 6px; }
         .links { display: grid; gap: 12px; margin-top: 28px; }
