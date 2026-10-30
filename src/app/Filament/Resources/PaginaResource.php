@@ -151,7 +151,9 @@ class PaginaResource extends Resource
                                     ->live()
                                     ->helperText(fn (?Pagina $record): string => $record && app(LogoCache::class)->isKnownMissing($record)
                                         ? 'El archivo de este logo no está en Supabase. Súbelo de nuevo para recuperarlo.'
-                                        : 'Se conserva la imagen completa por defecto. Define la forma y el tamaño debajo.')
+                                        : ($record && app(LogoCache::class)->isRecovered($record)
+                                            ? 'Se muestra una copia de la publicación. El original falta en Supabase; súbelo de nuevo si necesitas reemplazarlo.'
+                                            : 'Se conserva la imagen completa por defecto. Define la forma y el tamaño debajo.'))
                                     ->afterStateUpdated(function (Forms\Get $get, Forms\Set $set, mixed $state): void {
                                         if ($get('paleta_personalizada')) {
                                             return;

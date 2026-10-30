@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\Pagina;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use RuntimeException;
@@ -46,6 +47,14 @@ final class LogoCache
             && app(CatalogSyncState::class)->cache()->has($this->missingKey($key));
     }
 
+    public function isRecovered(Pagina $page): bool
+    {
+        $key = $this->cacheKey($page);
+
+        return $key !== null && $this->isCached($page)
+            && Storage::disk('local')->get($key.'.source') === 'published';
+    }
+
     public function path(Pagina $page, bool $retryMissing = false): ?string
     {
         $key = $this->cacheKey($page);
@@ -70,15 +79,23 @@ final class LogoCache
             if ($local->exists($key)) {
                 return $local->path($key);
             }
-            if (! Storage::disk('supabase')->exists($page->logo_path)) {
-                $cache->put($missingKey, true, now()->addHours(6));
+            $source = 'supabase';
+            if (Storage::disk('supabase')->exists($page->logo_path)) {
+                $stream = Storage::disk('supabase')->readStream($page->logo_path);
+            } else {
+                $contents = $this->publishedCopy($page);
+                if ($contents === null) {
+                    $cache->put($missingKey, true, now()->addHours(6));
 
-                return null;
+                    return null;
+                }
+                $stream = fopen('php://temp', 'w+b');
+                fwrite($stream, $contents);
+                rewind($stream);
+                $source = 'published';
             }
-
-            $stream = Storage::disk('supabase')->readStream($page->logo_path);
             if (! is_resource($stream)) {
-                throw new RuntimeException('Supabase no entregó la imagen solicitada.');
+                throw new RuntimeException('No se pudo leer la imagen de origen.');
             }
             $temporary = $key.'.part-'.Str::uuid();
             try {
@@ -97,6 +114,9 @@ final class LogoCache
                 if (! $local->move($temporary, $key)) {
                     throw new RuntimeException('No se pudo completar la caché de la imagen.');
                 }
+                if ($source === 'published') {
+                    $local->put($key.'.source', $source);
+                }
 
                 return $local->path($key);
             } catch (Throwable $exception) {
@@ -106,10 +126,10 @@ final class LogoCache
         });
     }
 
-    /** @return array{cached: int, downloaded: int, missing: list<string>, errors: list<string>} */
+    /** @return array{cached: int, downloaded: int, recovered: int, missing: list<string>, errors: list<string>} */
     public function warm(bool $retryMissing = false): array
     {
-        $summary = ['cached' => 0, 'downloaded' => 0, 'missing' => [], 'errors' => []];
+        $summary = ['cached' => 0, 'downloaded' => 0, 'recovered' => 0, 'missing' => [], 'errors' => []];
         $pages = Pagina::query()->where('logo_disk', 'supabase')->whereNotNull('logo_path')->get();
         foreach ($pages as $page) {
             $cached = $this->isCached($page);
@@ -117,7 +137,7 @@ final class LogoCache
                 if ($this->path($page, $retryMissing) === null) {
                     $summary['missing'][] = $page->slug;
                 } else {
-                    $summary[$cached ? 'cached' : 'downloaded']++;
+                    $summary[$cached ? 'cached' : ($this->isRecovered($page) ? 'recovered' : 'downloaded')]++;
                 }
             } catch (Throwable $exception) {
                 report($exception);
@@ -126,6 +146,50 @@ final class LogoCache
         }
 
         return $summary;
+    }
+
+    private function publishedCopy(Pagina $page): ?string
+    {
+        $repository = trim((string) config('services.github.repository'));
+        $token = trim((string) config('services.github.token'));
+        $commit = (string) $page->publicacion_commit;
+        $hasCommit = preg_match('/\A[a-f0-9]{40}\z/i', $commit) === 1;
+        if ($repository === '' || $token === '' || (! $hasCommit && $page->publicacion_estado !== 'legado')) {
+            return null;
+        }
+
+        $extension = strtolower(pathinfo($page->logo_path, PATHINFO_EXTENSION));
+        $path = 'public/generated/logos/'.rawurlencode($page->slug).'.'.$extension;
+        $base = rtrim((string) config('services.github.api_url', 'https://api.github.com'), '/').'/repos/'.$repository;
+        $client = Http::withToken($token)->acceptJson()->timeout(20)->withHeaders(['User-Agent' => 'ClickTap']);
+        if ($hasCommit) {
+            $response = $client->get($base.'/contents/'.$path, ['ref' => $commit]);
+        }
+        if (! $hasCommit || $response->status() === 404) {
+            $response = $client->get($base.'/contents/'.$path, ['ref' => config('services.github.branch', 'main')]);
+        }
+        if ($response->status() === 404) {
+            return null;
+        }
+        $response->throw();
+        if ((int) $response->json('size', 0) > self::MAX_BYTES) {
+            throw new RuntimeException('La copia publicada supera el tamaño permitido.');
+        }
+        $encoded = $response->json('content');
+        if ($response->json('encoding') === 'base64' && is_string($encoded) && $encoded !== '') {
+            return base64_decode(preg_replace('/\s+/', '', $encoded), true) ?: null;
+        }
+
+        $sha = (string) $response->json('sha');
+        if (preg_match('/\A[a-f0-9]{40}\z/i', $sha) !== 1) {
+            return null;
+        }
+        $blob = $client->get($base.'/git/blobs/'.$sha)->throw();
+        $encoded = $blob->json('content');
+
+        return $blob->json('encoding') === 'base64' && is_string($encoded)
+            ? (base64_decode(preg_replace('/\s+/', '', $encoded), true) ?: null)
+            : null;
     }
 
     private function cacheKey(Pagina $page): ?string

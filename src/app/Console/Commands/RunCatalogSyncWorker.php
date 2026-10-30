@@ -27,7 +27,7 @@ class RunCatalogSyncWorker extends Command
                     $this->info('Copia local actualizada.');
                     try {
                         $logos = app(LogoCache::class)->warm();
-                        $this->info('Imágenes locales: '.$logos['cached'].' en caché, '.$logos['downloaded'].' descargadas, '.count($logos['missing']).' ausentes en Supabase.');
+                        $this->info('Imágenes locales: '.$logos['cached'].' en caché, '.$logos['downloaded'].' descargadas de Supabase, '.$logos['recovered'].' recuperadas del sitio publicado, '.count($logos['missing']).' sin copia.');
                         if ($logos['errors'] !== []) {
                             $this->warn('Algunas imágenes no se pudieron descargar; se reintentará en la próxima sincronización.');
                         }

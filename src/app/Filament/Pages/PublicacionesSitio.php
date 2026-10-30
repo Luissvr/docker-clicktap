@@ -39,6 +39,8 @@ class PublicacionesSitio extends Page
 
     public array $withdrawalReasons = [];
 
+    public array $selectedPages = [];
+
     public function mount(): void
     {
         $search = request()->query('search');
@@ -49,11 +51,13 @@ class PublicacionesSitio extends Page
 
     public function updatedSearch(): void
     {
+        $this->selectedPages = [];
         $this->resetPage();
     }
 
     public function updatedFilter(): void
     {
+        $this->selectedPages = [];
         $this->resetPage();
     }
 
@@ -64,6 +68,7 @@ class PublicacionesSitio extends Page
             abort_unless(app(PageTrash::class)->available(), 503);
         }
         $this->filter = $this->filter === $filter ? 'all' : $filter;
+        $this->selectedPages = [];
         $this->resetPage();
     }
 
@@ -115,6 +120,10 @@ class PublicacionesSitio extends Page
             'pageStatuses' => $pageStatuses,
             'coverUrls' => $coverUrls,
             'trashAvailable' => $trashAvailable,
+            'selectableIds' => $pages->getCollection()->filter(fn (Pagina $page): bool => $page->papelera_en !== null
+                ? $trash->isNeverPublished($page)
+                : $trash->isUnpublishedDraft($page))->pluck('id')->all(),
+            'draftsInTrash' => $trashAvailable ? $this->neverPublishedQuery()->whereNotNull('papelera_en')->count() : 0,
             'pageEditUrl' => fn (Pagina $page): string => PaginaResource::getUrl('edit', ['record' => $page]),
             'counts' => [
                 'published' => Pagina::query()->when($trashAvailable, fn (Builder $query): Builder => $query->whereNull('papelera_en'))->where('activo', true)->where('publicacion_estado', 'publicada')->count(),
@@ -217,6 +226,93 @@ class PublicacionesSitio extends Page
     {
         app(PageTrash::class)->move($pageId);
         Notification::make()->warning()->title('Página movida a la papelera')->body('Se conserva 30 días. Si estuvo publicada, espera a que se confirme la retirada del sitio.')->send();
+    }
+
+    public function moveSelectedDraftsToTrash(): void
+    {
+        $this->guardBulkAction();
+        abort_if($this->filter === 'trash', 409);
+        $ids = $this->selectedIds();
+        $eligible = $this->neverPublishedQuery()->whereNull('papelera_en')->whereIn('id', $ids)->count();
+        abort_unless($eligible === count($ids), 409, 'La selección incluye páginas que no son borradores sin publicar.');
+
+        $trash = app(PageTrash::class);
+        foreach ($ids as $id) {
+            $trash->moveDraft($id);
+        }
+        $this->selectedPages = [];
+        Notification::make()->warning()->title(count($ids).' borradores movidos a la papelera')->send();
+    }
+
+    public function deleteSelectedDrafts(): void
+    {
+        $this->guardBulkAction();
+        abort_unless($this->filter === 'trash', 409);
+        $ids = $this->selectedIds();
+        $eligible = $this->neverPublishedQuery()->whereNotNull('papelera_en')->whereIn('id', $ids)->count();
+        abort_unless($eligible === count($ids), 409, 'La selección incluye páginas que estuvieron publicadas.');
+
+        $trash = app(PageTrash::class);
+        foreach ($ids as $id) {
+            $trash->purgeDraft($id);
+        }
+        $this->selectedPages = [];
+        Notification::make()->success()->title(count($ids).' borradores eliminados definitivamente')->send();
+    }
+
+    public function deleteSelectedDraftsDirectly(): void
+    {
+        $this->guardBulkAction();
+        abort_if($this->filter === 'trash', 409);
+        $ids = $this->selectedIds();
+        $eligible = $this->neverPublishedQuery()->whereNull('papelera_en')->whereIn('id', $ids)->count();
+        abort_unless($eligible === count($ids), 409, 'La selección incluye páginas que no son borradores sin publicar.');
+
+        $trash = app(PageTrash::class);
+        foreach ($ids as $id) {
+            $trash->moveDraft($id);
+            $trash->purgeDraft($id);
+        }
+        $this->selectedPages = [];
+        Notification::make()->success()->title(count($ids).' borradores eliminados definitivamente')->send();
+    }
+
+    public function emptyDraftTrash(): void
+    {
+        $this->guardBulkAction();
+        abort_unless($this->filter === 'trash', 409);
+        $ids = $this->neverPublishedQuery()->whereNotNull('papelera_en')->pluck('id');
+        $trash = app(PageTrash::class);
+        foreach ($ids as $id) {
+            $trash->purgeDraft($id);
+        }
+        $this->selectedPages = [];
+        Notification::make()->success()->title($ids->count().' borradores eliminados de la papelera')->send();
+    }
+
+    private function guardBulkAction(): void
+    {
+        abort_unless(auth()->user()?->activo, 403);
+        abort_unless(app(PageTrash::class)->available(), 503, 'La papelera aún no está disponible.');
+    }
+
+    /** @return list<string> */
+    private function selectedIds(): array
+    {
+        abort_unless(count($this->selectedPages) > 0 && count($this->selectedPages) <= 100, 422);
+        foreach ($this->selectedPages as $id) {
+            abort_unless(is_string($id) && $id !== '', 422);
+        }
+
+        return array_values(array_unique($this->selectedPages));
+    }
+
+    private function neverPublishedQuery(): Builder
+    {
+        return Pagina::query()
+            ->where('publicacion_estado', 'sin_publicar')
+            ->whereNull('publicacion_commit')
+            ->whereNull('publicada_en');
     }
 
     public function restoreFromTrash(string $pageId): void

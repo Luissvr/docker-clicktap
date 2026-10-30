@@ -119,4 +119,82 @@ class PageTrashTest extends TestCase
         $this->expectExceptionMessage('Restaura la página desde la papelera');
         $page->fresh()->forceFill(['activo' => true])->save();
     }
+
+    public function test_multiple_drafts_can_be_deleted_directly_without_touching_a_published_page(): void
+    {
+        $this->actingAs(User::factory()->create(['activo' => true]));
+        $first = Pagina::factory()->create(['publicacion_estado' => 'sin_publicar']);
+        $second = Pagina::factory()->create(['publicacion_estado' => 'sin_publicar']);
+        $published = Pagina::factory()->create([
+            'publicacion_estado' => 'publicada', 'publicacion_commit' => 'abc', 'publicada_en' => now(),
+        ]);
+
+        Livewire::test(PublicacionesSitio::class)
+            ->assertSee('Eliminar directamente')
+            ->set('selectedPages', [$first->id, $second->id])
+            ->call('deleteSelectedDraftsDirectly')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseMissing('paginas', ['id' => $first->id]);
+        $this->assertDatabaseMissing('paginas', ['id' => $second->id]);
+        $this->assertDatabaseHas('paginas', ['id' => $published->id, 'publicacion_estado' => 'publicada']);
+    }
+
+    public function test_selected_drafts_can_be_moved_to_trash_then_purged_together(): void
+    {
+        $this->actingAs(User::factory()->create(['activo' => true]));
+        $first = Pagina::factory()->create(['publicacion_estado' => 'sin_publicar']);
+        $second = Pagina::factory()->create(['publicacion_estado' => 'sin_publicar']);
+
+        Livewire::test(PublicacionesSitio::class)
+            ->set('selectedPages', [$first->id, $second->id])
+            ->call('moveSelectedDraftsToTrash')
+            ->assertHasNoErrors();
+        $this->assertNotNull($first->fresh()->papelera_en);
+        $this->assertNotNull($second->fresh()->papelera_en);
+
+        Livewire::test(PublicacionesSitio::class)
+            ->set('filter', 'trash')
+            ->set('selectedPages', [$first->id, $second->id])
+            ->call('deleteSelectedDrafts')
+            ->assertHasNoErrors();
+        $this->assertDatabaseMissing('paginas', ['id' => $first->id]);
+        $this->assertDatabaseMissing('paginas', ['id' => $second->id]);
+    }
+
+    public function test_bulk_selection_rejects_published_pages_before_deleting_any_draft(): void
+    {
+        $this->actingAs(User::factory()->create(['activo' => true]));
+        $draft = Pagina::factory()->create(['publicacion_estado' => 'sin_publicar']);
+        $published = Pagina::factory()->create([
+            'publicacion_estado' => 'publicada', 'publicacion_commit' => 'abc', 'publicada_en' => now(),
+        ]);
+
+        Livewire::test(PublicacionesSitio::class)
+            ->set('selectedPages', [$draft->id, $published->id])
+            ->call('deleteSelectedDraftsDirectly')
+            ->assertStatus(409);
+
+        $this->assertDatabaseHas('paginas', ['id' => $draft->id]);
+        $this->assertDatabaseHas('paginas', ['id' => $published->id]);
+    }
+
+    public function test_empty_trash_only_removes_never_published_drafts(): void
+    {
+        $this->actingAs(User::factory()->create(['activo' => true]));
+        $draft = Pagina::factory()->create(['publicacion_estado' => 'sin_publicar', 'activo' => false, 'papelera_en' => now()]);
+        $retired = Pagina::factory()->create([
+            'publicacion_estado' => 'retirada', 'publicacion_commit' => 'abc',
+            'publicada_en' => now()->subDay(), 'activo' => false, 'papelera_en' => now(),
+        ]);
+
+        Livewire::test(PublicacionesSitio::class)
+            ->set('filter', 'trash')
+            ->assertSee('Vaciar papelera de borradores (1)')
+            ->call('emptyDraftTrash')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseMissing('paginas', ['id' => $draft->id]);
+        $this->assertDatabaseHas('paginas', ['id' => $retired->id, 'publicacion_commit' => 'abc']);
+    }
 }

@@ -43,9 +43,12 @@ final class PageTrash
     public function isUnpublishedDraft(Pagina $page): bool
     {
         return $page->papelera_en === null
-            && $page->publicacion_estado === 'sin_publicar'
-            && $page->publicacion_commit === null
-            && $page->publicada_en === null;
+            && $this->isNeverPublished($page);
+    }
+
+    public function isNeverPublished(Pagina $page): bool
+    {
+        return $this->wasNeverPublished($page);
     }
 
     private function movePage(string $pageId, bool $draftOnly): Pagina
@@ -104,10 +107,21 @@ final class PageTrash
 
     public function purge(string $pageId): void
     {
+        $this->purgePage($pageId, false);
+    }
+
+    public function purgeDraft(string $pageId): void
+    {
+        $this->purgePage($pageId, true);
+    }
+
+    private function purgePage(string $pageId, bool $draftOnly): void
+    {
         abort_unless($this->available(), 503, 'La papelera aún no está disponible.');
-        CatalogConnection::transaction(function () use ($pageId): void {
+        CatalogConnection::transaction(function () use ($pageId, $draftOnly): void {
             $page = Pagina::query()->whereKey($pageId)->lockForUpdate()->firstOrFail();
             abort_unless($page->papelera_en !== null, 409);
+            abort_if($draftOnly && ! $this->isNeverPublished($page), 409, 'Solo se pueden eliminar en lote borradores nunca publicados.');
             abort_unless($this->canLeaveTrash($page), 409, 'La retirada pública debe estar comprobada antes de eliminar.');
             $page->getConnection()->table('ventas')->where('pagina_id', $pageId)->update([
                 'pagina_id' => null,
