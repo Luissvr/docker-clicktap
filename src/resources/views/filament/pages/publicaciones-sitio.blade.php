@@ -54,7 +54,7 @@
                         $sale = $sales->get($page->id);
                         $task = $pageStatuses[$page->id] ?? null;
                         $withdrawal = in_array($page->publicacion_estado, ['retirada_pendiente', 'retirando', 'retirada_enviada', 'retirada_fallida'], true);
-                        $allowed = ! is_array(config('clicktap.publication_slugs')) || in_array($page->slug, config('clicktap.publication_slugs'), true);
+                        $allowed = ! is_array(config('clicktap.publication_slugs')) || in_array($page->slug, config('clicktap.publication_slugs'), true) || app(\App\Support\PageTrash::class)->isUnpublishedDraft($page);
                         $isRejected = in_array($sale?->estado, ['rechazada', 'cancelacion_pendiente'], true);
                         $isPublished = $page->papelera_en === null && $page->activo && $page->publicacion_estado === 'publicada';
                         $isForSale = $page->papelera_en === null && $page->activo && $page->publicacion_estado === 'sin_publicar' && ! $isRejected && $sale?->estado !== 'confirmada';

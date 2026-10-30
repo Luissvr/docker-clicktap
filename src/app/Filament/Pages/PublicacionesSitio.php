@@ -204,12 +204,17 @@ class PublicacionesSitio extends Page
         $candidate = Pagina::findOrFail($pageId);
         abort_if($candidate->papelera_en !== null, 409, 'Restaura la página desde la papelera primero.');
         $allowed = config('clicktap.publication_slugs');
-        abort_if(is_array($allowed) && ! in_array($candidate->slug, $allowed, true), 422, 'Esta página no está incluida en la selección de publicación.');
+        abort_if(is_array($allowed) && ! in_array($candidate->slug, $allowed, true)
+            && ! app(PageTrash::class)->isUnpublishedDraft($candidate), 422, 'Esta página no está incluida en la selección de publicación.');
         $linkedSale = app(BusinessLedger::class)->connection()->table('ventas')->where('pagina_id', $pageId)->first();
         abort_if($linkedSale && in_array($linkedSale->estado, ['rechazada', 'cancelacion_pendiente'], true), 409, 'Resuelve primero la situación comercial de la venta.');
 
         $page = CatalogConnection::transaction(function () use ($pageId): Pagina {
             $page = Pagina::query()->whereKey($pageId)->lockForUpdate()->firstOrFail();
+            abort_if($page->papelera_en !== null, 409, 'Restaura la página desde la papelera primero.');
+            $allowed = config('clicktap.publication_slugs');
+            abort_if(is_array($allowed) && ! in_array($page->slug, $allowed, true)
+                && ! app(PageTrash::class)->isUnpublishedDraft($page), 422, 'Esta página no está incluida en la selección de publicación.');
             $page->forceFill([
                 'activo' => true,
                 'publicacion_estado' => 'sin_publicar',
@@ -252,10 +257,8 @@ class PublicacionesSitio extends Page
         $pages = CatalogConnection::remoteReads(fn () => Pagina::query()->whereIn('id', $ids)->get());
         abort_unless($pages->count() === count($ids), 409, 'La selección cambió. Vuelve a elegir los borradores.');
         $trash = app(PageTrash::class);
-        $allowed = config('clicktap.publication_slugs');
         foreach ($pages as $page) {
             abort_unless($trash->isUnpublishedDraft($page), 409, 'Solo se pueden publicar borradores que nunca se han publicado.');
-            abort_if(is_array($allowed) && ! in_array($page->slug, $allowed, true), 422, 'Hay páginas fuera de la selección de publicación.');
         }
         abort_if(app(BusinessLedger::class)->connection()->table('ventas')
             ->whereIn('pagina_id', $ids)

@@ -145,7 +145,10 @@ class PublicPagePublisherTest extends TestCase
     {
         config()->set('clicktap.publication_slugs', ['selected']);
         Http::fake();
-        $page = Pagina::factory()->create(['slug' => 'excluded', 'activo' => true]);
+        $page = Pagina::factory()->create([
+            'slug' => 'excluded', 'activo' => true, 'publicacion_estado' => 'publicada',
+            'publicacion_commit' => 'existing-commit', 'publicada_en' => now(),
+        ]);
 
         try {
             app(PublicPagePublisher::class)->publish($page);
@@ -155,6 +158,6 @@ class PublicPagePublisherTest extends TestCase
         }
 
         Http::assertNothingSent();
-        $this->assertDatabaseHas('paginas', ['id' => $page->id, 'publicacion_estado' => 'sin_publicar']);
+        $this->assertDatabaseHas('paginas', ['id' => $page->id, 'publicacion_estado' => 'publicada']);
     }
 }

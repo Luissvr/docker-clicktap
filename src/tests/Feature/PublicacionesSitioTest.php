@@ -139,7 +139,7 @@ class PublicacionesSitioTest extends TestCase
         $this->assertSame(0, app(PublicationQueue::class)->status()['pendingCount']);
     }
 
-    public function test_bulk_publication_respects_the_publication_slug_selection(): void
+    public function test_bulk_publication_allows_new_drafts_outside_the_legacy_slug_selection(): void
     {
         $this->actingAs(User::factory()->create(['activo' => true]));
         $draft = Pagina::factory()->create(['slug' => 'fuera-de-seleccion', 'activo' => false, 'publicacion_estado' => 'sin_publicar']);
@@ -148,10 +148,10 @@ class PublicacionesSitioTest extends TestCase
         Livewire::test(PublicacionesSitio::class)
             ->set('selectedPages', [$draft->id])
             ->call('publishSelectedDrafts')
-            ->assertStatus(422);
+            ->assertHasNoErrors();
 
-        $this->assertFalse($draft->fresh()->activo);
-        $this->assertSame(0, app(PublicationQueue::class)->status()['pendingCount']);
+        $this->assertTrue($draft->fresh()->activo);
+        $this->assertSame(1, app(PublicationQueue::class)->status()['pendingCount']);
     }
 
     public function test_unpublishing_a_sold_page_keeps_the_sale_confirmed(): void

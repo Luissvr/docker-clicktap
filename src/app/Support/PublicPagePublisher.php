@@ -17,7 +17,8 @@ final class PublicPagePublisher
     public function publish(Pagina $pagina, ?Closure $progress = null): string
     {
         $slugs = config('clicktap.publication_slugs');
-        if (! $pagina->activo || $pagina->papelera_en !== null || (is_array($slugs) && ! in_array($pagina->slug, $slugs, true))) {
+        if (! $pagina->activo || $pagina->papelera_en !== null || (is_array($slugs) && ! in_array($pagina->slug, $slugs, true)
+            && ! app(PageTrash::class)->isUnpublishedDraft($pagina))) {
             throw new RuntimeException('Esta página no está incluida en la selección de publicación.');
         }
         try {

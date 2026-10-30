@@ -8,6 +8,7 @@ use App\Support\PublicationQueue;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Tests\TestCase;
 
 class PublicationQueueTest extends TestCase
@@ -66,6 +67,68 @@ class PublicationQueueTest extends TestCase
         $requests = count(Http::recorded());
         $queue->work();
         Http::assertSentCount($requests);
+    }
+
+    public function test_new_draft_outside_legacy_selection_is_published_without_changing_existing_page(): void
+    {
+        $this->actingAs(User::factory()->create(['activo' => true]));
+        config([
+            'clicktap.publication_slugs' => ['existing'],
+            'services.github.token' => 'test-token',
+            'services.github.repository' => 'owner/site',
+            'services.github.branch' => 'main',
+        ]);
+        $existing = Pagina::factory()->create([
+            'slug' => 'existing', 'activo' => true, 'publicacion_estado' => 'publicada',
+            'publicacion_commit' => 'existing-commit', 'publicada_en' => now(),
+        ]);
+        $existingBefore = $existing->fresh()->getAttributes();
+        $draft = Pagina::factory()->create(['slug' => 'new-draft', 'activo' => true, 'publicacion_estado' => 'sin_publicar']);
+        $existingContract = ['slug' => 'existing', 'name' => 'Production unchanged'];
+        Http::fake(fn (Request $request) => match (true) {
+            str_ends_with($request->url(), '/git/ref/heads/main') => Http::response(['object' => ['sha' => 'head']]),
+            str_ends_with($request->url(), '/git/commits/head') => Http::response(['tree' => ['sha' => 'tree']]),
+            str_contains($request->url(), '/contents/src/data/generated/pages.json') => Http::response([
+                'content' => base64_encode(json_encode(['version' => 1, 'pages' => [$existingContract]])),
+            ]),
+            str_ends_with($request->url(), '/git/blobs') => Http::response(['sha' => 'blob']),
+            str_ends_with($request->url(), '/git/trees') => Http::response(['sha' => 'new-tree']),
+            str_ends_with($request->url(), '/git/commits') => Http::response(['sha' => 'new-commit']),
+            str_ends_with($request->url(), '/git/refs/heads/main') => Http::response([]),
+            default => Http::response([], 404),
+        });
+
+        $queue = app(PublicationQueue::class);
+        $queue->request($draft);
+        $queue->work();
+
+        $this->assertSame('enviada', $queue->status()['result']['state']);
+        $this->assertSame('new-commit', $draft->fresh()->publicacion_commit);
+        $this->assertSame($existingBefore, $existing->fresh()->getAttributes());
+        $blob = collect(Http::recorded())->first(fn (array $item): bool => str_ends_with($item[0]->url(), '/git/blobs'))[0];
+        $contract = json_decode(base64_decode($blob['content']), true);
+        $this->assertSame($existingContract, $contract['pages'][0]);
+        $this->assertSame('new-draft', $contract['pages'][1]['slug']);
+    }
+
+    public function test_existing_published_page_outside_selection_cannot_be_queued(): void
+    {
+        $this->actingAs(User::factory()->create(['activo' => true]));
+        config(['clicktap.publication_slugs' => ['another-page']]);
+        $published = Pagina::factory()->create([
+            'slug' => 'published-outside-selection', 'activo' => true,
+            'publicacion_estado' => 'publicada', 'publicacion_commit' => 'existing-commit', 'publicada_en' => now(),
+        ]);
+
+        try {
+            app(PublicationQueue::class)->request($published);
+            $this->fail('Una página ya publicada fuera de la selección entró a la cola.');
+        } catch (HttpException $exception) {
+            $this->assertSame(422, $exception->getStatusCode());
+        }
+
+        $this->assertSame(0, app(PublicationQueue::class)->status()['pendingCount']);
+        $this->assertSame('publicada', $published->fresh()->publicacion_estado);
     }
 
     public function test_failed_sends_are_visible_and_not_blindly_repeated(): void

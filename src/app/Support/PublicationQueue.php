@@ -18,7 +18,8 @@ class PublicationQueue
     {
         abort_unless(auth()->user()?->activo && $page->activo && $page->papelera_en === null, 403);
         $allowed = config('clicktap.publication_slugs');
-        abort_if(is_array($allowed) && ! in_array($page->slug, $allowed, true), 422, 'Esta página no está incluida en la selección de publicación.');
+        abort_if(is_array($allowed) && ! in_array($page->slug, $allowed, true)
+            && ! app(PageTrash::class)->isUnpublishedDraft($page), 422, 'Esta página no está incluida en la selección de publicación.');
         $this->enqueue($page, 'publish');
     }
 

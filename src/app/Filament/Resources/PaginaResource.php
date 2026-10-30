@@ -639,7 +639,7 @@ class PaginaResource extends Resource
                     ->requiresConfirmation()
                     ->modalHeading('Publicar página')
                     ->modalDescription('Se enviará únicamente esta página. Las demás se conservarán como están en producción.')
-                    ->visible(fn (Pagina $record): bool => $record->activo && (! is_array(config('clicktap.publication_slugs')) || in_array($record->slug, config('clicktap.publication_slugs'), true)))
+                    ->visible(fn (Pagina $record): bool => $record->activo && (! is_array(config('clicktap.publication_slugs')) || in_array($record->slug, config('clicktap.publication_slugs'), true) || app(PageTrash::class)->isUnpublishedDraft($record)))
                     ->action(function (Pagina $record): void {
                         try {
                             app(PublicationQueue::class)->request($record);
