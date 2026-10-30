@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\PaginaResource\Pages;
 use App\Models\Pagina;
 use App\Support\LinkTypeHelper;
+use App\Support\LogoCache;
 use App\Support\LogoPalette;
 use App\Support\PageAppearance;
 use App\Support\PageDescription;
@@ -116,11 +117,41 @@ class PaginaResource extends Resource
                                     ->extraAlpineAttributes(['x-ignore' => ''])
                                     ->label('Logo o imagen principal')
                                     ->image()
+                                    ->fetchFileInformation(false)
+                                    ->getUploadedFileUsing(static function (Forms\Components\BaseFileUpload $component, string $file, string|array|null $storedFileNames): ?array {
+                                        $record = $component->getRecord();
+                                        if ($record instanceof Pagina && $record->logo_path === $file && app(LogoCache::class)->isKnownMissing($record)) {
+                                            return null;
+                                        }
+                                        $cachedUrl = $record instanceof Pagina && $record->logo_disk === 'supabase' && $record->logo_path === $file
+                                            ? app(LogoCache::class)->url($record)
+                                            : null;
+                                        if ($cachedUrl !== null) {
+                                            $url = $cachedUrl;
+                                        } else {
+                                            try {
+                                                $url = $component->getVisibility() === 'private'
+                                                    ? $component->getDisk()->temporaryUrl($file, now()->addMinutes(5))
+                                                    : $component->getDisk()->url($file);
+                                            } catch (Throwable) {
+                                                return null;
+                                            }
+                                        }
+
+                                        return $url === null ? null : [
+                                            'name' => is_string($storedFileNames) ? $storedFileNames : basename($file),
+                                            'size' => 0,
+                                            'type' => null,
+                                            'url' => $url,
+                                        ];
+                                    })
                                     ->disk(fn (?Pagina $record): string => $record?->logo_disk ?? config('clicktap.media_disk', 'public'))
                                     ->visibility(fn (?Pagina $record): string => ($record?->logo_disk ?? config('clicktap.media_disk', 'public')) === 'public' ? 'public' : 'private')
                                     ->directory('logos')
                                     ->live()
-                                    ->helperText('Se conserva la imagen completa por defecto. Define la forma y el tamaño debajo.')
+                                    ->helperText(fn (?Pagina $record): string => $record && app(LogoCache::class)->isKnownMissing($record)
+                                        ? 'El archivo de este logo no está en Supabase. Súbelo de nuevo para recuperarlo.'
+                                        : 'Se conserva la imagen completa por defecto. Define la forma y el tamaño debajo.')
                                     ->afterStateUpdated(function (Forms\Get $get, Forms\Set $set, mixed $state): void {
                                         if ($get('paleta_personalizada')) {
                                             return;

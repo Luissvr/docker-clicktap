@@ -101,29 +101,40 @@ final class PagePreviewCompiler
                 }
             }
             if (is_string($first) && trim($first) !== '') {
-                return self::formatStorageUrl($first, $record?->logo_disk);
+                return self::formatStorageUrl($first, $record);
             }
         }
 
         if (is_string($logoState) && trim($logoState) !== '') {
-            return self::formatStorageUrl($logoState, $record?->logo_disk);
+            return self::formatStorageUrl($logoState, $record);
         }
 
         if ($record?->logo_path) {
-            return self::formatStorageUrl($record->logo_path, $record->logo_disk);
+            return self::formatStorageUrl($record->logo_path, $record);
         }
 
         return null;
     }
 
-    private static function formatStorageUrl(string $path, ?string $disk = null): string
+    private static function formatStorageUrl(string $path, ?Pagina $record = null): ?string
     {
         $path = trim($path);
         if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
             return $path;
         }
 
-        $disk = $disk ?? config('clicktap.media_disk', 'public');
+        if ($record?->logo_disk === 'supabase' && $record->logo_path === $path) {
+            $cache = app(LogoCache::class);
+            if ($cache->isKnownMissing($record)) {
+                return null;
+            }
+            $cached = $cache->url($record);
+            if ($cached !== null) {
+                return $cached;
+            }
+        }
+
+        $disk = $record?->logo_disk ?? config('clicktap.media_disk', 'public');
         if ($disk === 'public') {
             return '/storage/'.ltrim($path, '/');
         }

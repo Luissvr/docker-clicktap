@@ -244,19 +244,24 @@ final class PublicPagePublisher
         }
 
         $source = ltrim($logo, '/');
-        $disk = Storage::disk($pagina->logo_disk);
-        if (! $disk->exists($source)) {
-            throw new RuntimeException("No se encontró el logo público: {$source}.");
-        }
-
         $extension = strtolower(pathinfo($source, PATHINFO_EXTENSION)) ?: 'bin';
         if (! in_array($extension, ['png', 'jpg', 'jpeg', 'webp', 'gif', 'svg'], true)) {
             throw new RuntimeException("Formato de logo no permitido: .{$extension}.");
         }
+        if ($pagina->logo_disk === 'supabase' && app(LogoCache::class)->url($pagina) !== null) {
+            $cached = app(LogoCache::class)->path($pagina);
+            $contents = $cached !== null ? file_get_contents($cached) : false;
+        } else {
+            $disk = Storage::disk($pagina->logo_disk);
+            $contents = $disk->exists($source) ? $disk->get($source) : false;
+        }
+        if (! is_string($contents)) {
+            throw new RuntimeException("No se encontró el logo público: {$source}.");
+        }
 
         return [[
             'path' => 'public/generated/logos/'.$pagina->slug.'.'.$extension,
-            'contents' => $disk->get($source),
+            'contents' => $contents,
         ]];
     }
 

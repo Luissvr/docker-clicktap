@@ -134,6 +134,16 @@ final class PageTrash
 
         try {
             $disk = $page->logo_disk ?: config('clicktap.media_disk', 'public');
+            if ($disk === 'supabase') {
+                $cache = app(LogoCache::class);
+                if ($cache->isKnownMissing($page)) {
+                    return null;
+                }
+                $cached = $cache->url($page);
+                if ($cached !== null) {
+                    return $cached;
+                }
+            }
 
             return $disk === 'public'
                 ? Storage::disk($disk)->url($path)
@@ -153,11 +163,17 @@ final class PageTrash
         $path = $page->logo_path;
         if (is_string($path) && $path !== '' && ! preg_match('~^https?://~i', $path)) {
             $disk = $page->logo_disk ?: config('clicktap.media_disk', 'public');
-            if (Storage::disk($disk)->exists($path)) {
+            if ($disk === 'supabase' && app(LogoCache::class)->url($page) !== null) {
+                $cached = app(LogoCache::class)->path($page);
+                $contents = $cached !== null ? file_get_contents($cached) : null;
+            } else {
+                $contents = Storage::disk($disk)->exists($path) ? Storage::disk($disk)->get($path) : null;
+            }
+            if (is_string($contents)) {
                 $logo = [
                     'disk' => $disk,
                     'path' => $path,
-                    'base64' => base64_encode(Storage::disk($disk)->get($path)),
+                    'base64' => base64_encode($contents),
                 ];
             }
         }
