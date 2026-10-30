@@ -1,9 +1,12 @@
 <?php
 
-use Illuminate\Foundation\Inspiring;
 use App\Support\PublicPageExporter;
+use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Schedule;
+
+Schedule::command('clicktap:prune-page-trash')->dailyAt('03:15')->timezone('America/Santiago')->withoutOverlapping();
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
@@ -15,6 +18,7 @@ Artisan::command('clicktap:export-public {--output=}', function (PublicPageExpor
 
     if (! is_string($output) || trim($output) === '') {
         $this->output->write($json);
+
         return;
     }
 

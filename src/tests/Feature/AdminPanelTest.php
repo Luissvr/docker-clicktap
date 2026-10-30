@@ -278,6 +278,49 @@ class AdminPanelTest extends TestCase
         }
     }
 
+    public function test_switching_appearance_rebuilds_the_layout_and_keeps_the_tagline_without_saving(): void
+    {
+        $this->actingAs(User::factory()->create());
+        $component = Livewire::test(CreatePagina::class)
+            ->fillForm([
+                'nombre_publico' => 'Negocio de prueba', 'slug' => 'negocio-de-prueba',
+                'tema' => 'comercio', 'descripcion' => 'Descripción visible',
+                'contenido_extra' => ['tagline' => 'Frase bajo el nombre'],
+            ])
+            ->call('loadPagePreview');
+
+        foreach (['default', 'comercio', 'default'] as $theme) {
+            $component->set('data.tema', $theme);
+            $html = $component->get('compiledPagePreviewHtml');
+            $this->assertStringContainsString('<body class="theme-'.$theme.'">', $html);
+            $this->assertStringContainsString('<p class="tagline">Frase bajo el nombre</p>', $html);
+            $this->assertLessThan(strpos($html, 'Descripción visible'), strpos($html, 'Frase bajo el nombre'));
+            $this->assertSame($theme === 'default', str_contains($html, '<div class="footer-brand">'));
+        }
+
+        $component->set('data.contenido_extra.tagline', 'Frase actualizada');
+        $this->assertStringContainsString('<p class="tagline">Frase actualizada</p>', $component->get('compiledPagePreviewHtml'));
+        $this->assertDatabaseCount('paginas', 0);
+    }
+
+    public function test_standalone_preview_uses_the_selected_layout_and_keeps_the_tagline(): void
+    {
+        $this->actingAs(User::factory()->create());
+        $page = Pagina::factory()->create([
+            'tema' => 'comercio', 'descripcion' => 'Descripción visible',
+            'contenido_extra' => ['tagline' => 'Frase bajo el nombre'],
+        ]);
+
+        foreach (['comercio', 'default'] as $theme) {
+            $page->update(['tema' => $theme]);
+            $response = $this->get(route('paginas.preview', $page))->assertOk()
+                ->assertSee('<body class="theme-'.$theme.'">', false)
+                ->assertSee('<p class="tagline">Frase bajo el nombre</p>', false)
+                ->assertSeeInOrder(['Frase bajo el nombre', 'Descripción visible']);
+            $this->assertSame($theme === 'default', str_contains($response->getContent(), '<div class="footer-brand">'));
+        }
+    }
+
     public function test_add_link_button_adds_an_editable_link_on_create_page(): void
     {
         $this->actingAs(User::factory()->create());
@@ -525,6 +568,43 @@ class AdminPanelTest extends TestCase
             ->assertOk()
             ->assertSee('class="description description--unbroken"', false)
             ->assertSee('text-justify: inter-character', false);
+    }
+
+    public function test_final_preview_can_open_during_creation_without_saving_or_validating_the_form(): void
+    {
+        $this->actingAs(User::factory()->create());
+        Livewire::test(CreatePagina::class)
+            ->assertSee('Abrir vista final')
+            ->fillForm([
+                'nombre_publico' => 'Borrador sin guardar', 'slug' => '',
+                'tema' => 'default', 'contenido_extra' => ['tagline' => 'Frase del borrador'],
+            ])
+            ->call('renderFinalPagePreview')
+            ->assertHasNoErrors()
+            ->assertReturned(fn (string $html): bool => str_contains($html, '<body class="theme-default">')
+                && str_contains($html, 'Borrador sin guardar')
+                && str_contains($html, 'Frase del borrador')
+                && str_contains($html, 'navigator.clipboard.writeText'));
+
+        $this->assertDatabaseCount('paginas', 0);
+        $this->assertDatabaseCount('locales', 0);
+    }
+
+    public function test_final_preview_uses_unsaved_edits_without_changing_the_saved_page(): void
+    {
+        $this->actingAs(User::factory()->create());
+        $page = Pagina::factory()->create(['nombre_publico' => 'Nombre guardado', 'tema' => 'comercio']);
+
+        Livewire::test(EditPagina::class, ['record' => $page->getRouteKey()])
+            ->assertSee('Abrir vista final')
+            ->fillForm(['nombre_publico' => 'Cambio sin guardar', 'tema' => 'default'])
+            ->call('renderFinalPagePreview')
+            ->assertHasNoErrors()
+            ->assertReturned(fn (string $html): bool => str_contains($html, 'Cambio sin guardar')
+                && str_contains($html, '<body class="theme-default">'));
+
+        $this->assertSame('Nombre guardado', $page->fresh()->nombre_publico);
+        $this->assertSame('comercio', $page->fresh()->tema);
     }
 
     public function test_page_preview_only_compiles_when_requested(): void

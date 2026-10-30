@@ -11,7 +11,7 @@ final class PagePreviewCompiler
     /**
      * @param  array<string, mixed>  $data
      */
-    public static function compile(array $data, ?Pagina $record = null): string
+    public static function compile(array $data, ?Pagina $record = null, bool $standalone = false, bool $mobilePreview = false): string
     {
         $nombre = $data['nombre_publico'] ?? ($record?->nombre_publico ?? '');
         $descripcion = $data['descripcion'] ?? ($record?->descripcion ?? '');
@@ -63,6 +63,8 @@ final class PagePreviewCompiler
         $googleFontUrl = TypographyHelper::googleFontUrl($tipografia);
 
         return view('paginas.mini-preview', [
+            'standalone' => $standalone,
+            'mobilePreview' => $mobilePreview,
             'nombre' => $nombre,
             'descripcion' => $descripcion,
             'direccion' => $direccion,

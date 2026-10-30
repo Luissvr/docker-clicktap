@@ -10,6 +10,15 @@
             <x-filament::button tag="a" color="gray" :href="\App\Filament\Resources\ClienteResource::getUrl()">
                 Clientes
             </x-filament::button>
+            <x-filament::button tag="a" color="gray" :href="\App\Filament\Pages\Ventas::getUrl()">
+                Crear venta
+            </x-filament::button>
+            <x-filament::button tag="a" color="gray" :href="\App\Filament\Pages\StockTarjetas::getUrl()">
+                Stock de tarjetas
+            </x-filament::button>
+            <x-filament::button tag="a" color="gray" :href="\App\Filament\Pages\PublicacionesSitio::getUrl()">
+                Publicaciones
+            </x-filament::button>
         </div>
     </x-filament::section>
 </x-filament-panels::page>

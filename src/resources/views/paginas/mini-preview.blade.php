@@ -63,6 +63,14 @@
             max-width: 360px;
             margin: 0 auto;
         }
+        .tagline {
+            margin: 0 auto 14px;
+            color: var(--text);
+            text-align: center;
+            font-size: 14px;
+            line-height: 1.45;
+            overflow-wrap: anywhere;
+        }
         body.theme-comercio {
             padding: 12px 12px 20px;
             text-align: left;
@@ -105,13 +113,10 @@
         .theme-comercio .detail-content a { display: block; color: inherit; text-decoration: none; overflow-wrap: anywhere; }
         .theme-comercio .detail-schedule { grid-column: 1 / -1; }
         .theme-comercio .links { gap: 8px; margin: 10px auto 0; width: 100%; }
-        .theme-comercio .link-button { display: flex; justify-content: center; gap: 10px; min-height: 48px; padding: 10px 15px; border: 1px solid var(--button); border-radius: 14px; background: var(--button); color: var(--button-text); font-size: 16px; }
+        .theme-comercio .link-button { min-height: 52px; padding: 10px 15px; border: 1px solid var(--button); border-radius: 14px; background: var(--button); color: var(--button-text); font-size: 16px; }
         .theme-comercio .link-button:hover { box-shadow: 0 0 0 2px var(--background), 0 0 0 3px var(--accent); }
-        .theme-comercio .link-button.link-button-review { position: relative; min-height: 48px; padding-inline: 2.8rem; font-size: 14px; }
-        .theme-comercio .link-button-review .link-icon { position: absolute; top: 50%; left: 1rem; transform: translateY(-50%); }
-        .theme-comercio .link-button-review .link-icon svg { color: var(--button-text); }
         .theme-comercio .link-label { width: auto; padding: 0; line-height: 1.25; white-space: normal; overflow: visible; text-overflow: clip; }
-        .theme-comercio .transfer-logo { width: 32px; height: 32px; object-fit: contain; border-radius: 4px; background: #fff; }
+        .theme-comercio .transfer-logo { width: 28px; height: 28px; object-fit: contain; border-radius: 4px; background: #fff; }
         .theme-comercio .footer-brand { display: none; }
         @media (max-width: 350px) {
             .theme-comercio .details { grid-template-columns: minmax(0, 1fr); gap: 0; }
@@ -191,7 +196,8 @@
         }
         .link-button {
             display: grid;
-            grid-template-columns: 1.25rem 1fr;
+            grid-template-columns: 28px minmax(0, 1fr) 28px;
+            gap: 8px;
             align-items: center;
             width: 100%;
             min-height: 48px;
@@ -215,22 +221,21 @@
             cursor: default;
         }
         .link-icon {
-            width: 1.25rem;
-            height: 1.25rem;
+            width: 28px;
+            height: 28px;
             display: flex;
             align-items: center;
             justify-content: center;
         }
         .link-icon svg {
-            width: 1.25rem;
-            height: 1.25rem;
+            width: 28px;
+            height: 28px;
         }
         .link-label {
             text-align: center;
-            padding-right: 1.25rem;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            min-width: 0;
+            white-space: normal;
+            overflow-wrap: anywhere;
         }
         .empty-placeholder {
             padding: 18px 12px;
@@ -247,10 +252,25 @@
             font-weight: 700;
             letter-spacing: 1.5px;
         }
+        .preview-device--mobile {
+            display: grid; place-items: center; min-height: 100vh;
+            padding: 24px; background: #d1d5db;
+        }
+        .preview-device--mobile .content {
+            width: min(100%, 390px); min-height: min(844px, calc(100dvh - 48px));
+            max-height: calc(100dvh - 48px); overflow-y: auto;
+            padding: 24px 16px; border: 10px solid #111827; border-radius: 36px;
+            background: var(--background); box-shadow: 0 20px 50px rgb(15 23 42 / .3);
+        }
+        body:has(.preview-device--mobile) { padding: 0; }
     </style>
 </head>
 <body class="theme-{{ $tema }}">
+<div class="preview-device{{ $mobilePreview ? ' preview-device--mobile' : '' }}">
 <div class="content">
+    @if ($standalone)
+        <span class="badge-preview">Vista previa del panel</span>
+    @endif
     <div class="logo-wrap">
         @if ($logoUrl)
             <img @class(['logo-img', 'logo-img--round' => $logoLayout === 'round', 'logo-img--rounded' => $logoLayout === 'rounded']) src="{{ $logoUrl }}" alt="Logo de {{ $nombre }}">
@@ -263,14 +283,15 @@
 
     <h1>{{ $nombre ?: 'Nombre del negocio' }}</h1>
 
+    @if ($tagline)
+        <p class="tagline">{{ $tagline }}</p>
+    @endif
+
     @if ($descripcion)
         <p @class(['description', 'description--unbroken' => preg_match('/\s/u', trim((string) $descripcion)) === 0])>{{ $descripcion }}</p>
     @endif
 
     @if ($tema === 'comercio')
-        @if ($tagline)
-            <p class="tagline">{{ $tagline }}</p>
-        @endif
         @if ($direccion || $telefono || $correo || $schedule)
             <div class="details" aria-label="Ubicación y contacto">
                 @if ($direccion)
@@ -344,5 +365,24 @@
         </div>
     @endif
 </div>
+</div>
+@if ($standalone)
+    <script>
+        document.addEventListener('click', async (event) => {
+            const button = event.target.closest('[data-copy-text]');
+            if (!button || !button.dataset.copyText.trim()) return;
+
+            const label = button.querySelector('.link-label');
+            const originalLabel = label.textContent;
+            try {
+                await navigator.clipboard.writeText(button.dataset.copyText);
+                label.textContent = '¡Copiado!';
+            } catch (_) {
+                label.textContent = 'No se pudo copiar';
+            }
+            setTimeout(() => { label.textContent = originalLabel; }, 1500);
+        });
+    </script>
+@endif
 </body>
 </html>

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\BusinessLedger;
 use App\Support\PageRoute;
 use App\Support\TracksCatalogChanges;
 use App\Support\UsesCatalogConnection;
@@ -44,6 +45,7 @@ class Pagina extends Model
         'publicacion_commit',
         'publicacion_error',
         'publicada_en',
+        'papelera_en',
     ];
 
     protected static function booted(): void
@@ -58,6 +60,18 @@ class Pagina extends Model
             if ($pagina->isDirty('slug')) {
                 throw new LogicException('El slug de una página no se puede modificar.');
             }
+            if ($pagina->isDirty('activo') && $pagina->activo) {
+                if ($pagina->papelera_en !== null) {
+                    throw new LogicException('Restaura la página desde la papelera antes de activarla.');
+                }
+                $rejected = app(BusinessLedger::class)->connection()->table('ventas')
+                    ->where('pagina_id', $pagina->getKey())
+                    ->whereIn('estado', ['rechazada', 'cancelacion_pendiente'])
+                    ->exists();
+                if ($rejected) {
+                    throw new LogicException('Resuelve la venta rechazada antes de activar la página.');
+                }
+            }
         });
     }
 
@@ -67,6 +81,7 @@ class Pagina extends Model
             'activo' => 'boolean',
             'paleta_personalizada' => 'boolean',
             'publicada_en' => 'datetime',
+            'papelera_en' => 'datetime',
             'contenido_extra' => 'array',
         ];
     }

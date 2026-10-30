@@ -42,4 +42,11 @@ return [
         'branch' => env('GITHUB_PUBLICATION_BRANCH', 'main'),
     ],
 
+    'cloudflare' => [
+        'account_id' => env('CLOUDFLARE_ACCOUNT_ID'),
+        'pages_project' => env('CLOUDFLARE_PAGES_PROJECT'),
+        'token' => env('CLOUDFLARE_API_TOKEN'),
+        'public_url' => env('CLOUDFLARE_PUBLIC_URL', 'https://clicktap.app'),
+    ],
+
 ];

@@ -26,6 +26,14 @@ services:
         condition: service_healthy
       db:
         condition: service_healthy
+  scheduler:
+    environment: !override
+      <<: *shared-environment
+    depends_on:
+      app:
+        condition: service_healthy
+      db:
+        condition: service_healthy
   db:
     profiles: !reset []
     healthcheck:

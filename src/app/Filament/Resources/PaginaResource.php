@@ -8,6 +8,7 @@ use App\Support\LinkTypeHelper;
 use App\Support\LogoPalette;
 use App\Support\PageAppearance;
 use App\Support\PageDescription;
+use App\Support\PageTrash;
 use App\Support\PublicationQueue;
 use App\Support\TransferBank;
 use App\Support\TypographyHelper;
@@ -17,6 +18,7 @@ use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\HtmlString;
 use Illuminate\Support\Str;
@@ -38,6 +40,13 @@ class PaginaResource extends Resource
     protected static ?string $pluralModelLabel = 'páginas';
 
     protected static ?string $recordTitleAttribute = 'nombre_publico';
+
+    public static function getEloquentQuery(): Builder
+    {
+        $query = parent::getEloquentQuery();
+
+        return app(PageTrash::class)->available() ? $query->whereNull('papelera_en') : $query;
+    }
 
     public static function form(Form $form): Form
     {
@@ -89,6 +98,7 @@ class PaginaResource extends Resource
                                 Forms\Components\TextInput::make('contenido_extra.tagline')
                                     ->label('Frase bajo el nombre')
                                     ->maxLength(255)
+                                    ->live(debounce: 500)
                                     ->helperText('Aparece debajo del título en la página pública.'),
                                 Forms\Components\Textarea::make('contenido_extra.schedule')
                                     ->label('Horario')
@@ -208,7 +218,8 @@ class PaginaResource extends Resource
                                     ])
                                     ->default('comercio')
                                     ->required()
-                                    ->live(),
+                                    ->live()
+                                    ->afterStateUpdated(fn (Component $livewire) => $livewire->loadPagePreview()),
                                 Forms\Components\Select::make('tipografia')
                                     ->label('Tipografía')
                                     ->options(TypographyHelper::options())
@@ -318,7 +329,7 @@ class PaginaResource extends Resource
                                         Forms\Components\Select::make('tipo')
                                             ->label('Tipo de enlace')
                                             ->options(LinkTypeHelper::options())
-                                            ->prefixIcon(fn (Forms\Get $get): string => LinkTypeHelper::heroicon($get('tipo')))
+                                            ->prefix(fn (Forms\Get $get): HtmlString => new HtmlString(LinkTypeHelper::iconSvg($get('tipo'), 'h-5 w-5')))
                                             ->required()
                                             ->live()
                                             ->afterStateUpdated(function (?string $state, Forms\Get $get, Forms\Set $set): void {
@@ -577,52 +588,50 @@ class PaginaResource extends Resource
             ])
             ->actionsAlignment('between')
             ->actions([
-                Tables\Actions\ActionGroup::make([
-                    Tables\Actions\Action::make('preview')
-                        ->label('Vista previa')
-                        ->icon('heroicon-o-eye')
-                        ->url(fn (Pagina $record): string => route('paginas.preview', $record))
-                        ->openUrlInNewTab(),
-                    Tables\Actions\Action::make('mobile_preview')
-                        ->label('Vista móvil')
-                        ->icon('heroicon-o-device-phone-mobile')
-                        ->url(fn (Pagina $record): string => route('paginas.preview', ['pagina' => $record, 'device' => 'mobile']))
-                        ->openUrlInNewTab(),
-                    Tables\Actions\Action::make('publish')
-                        ->label('Publicar')
-                        ->icon('heroicon-o-cloud-arrow-up')
-                        ->color('success')
-                        ->requiresConfirmation()
-                        ->modalHeading('Publicar página')
-                        ->modalDescription('Se enviará el contenido activo de todas las páginas al repositorio conectado.')
-                        ->visible(fn (Pagina $record): bool => $record->activo)
-                        ->action(function (Pagina $record): void {
-                            try {
-                                app(PublicationQueue::class)->request($record);
+                Tables\Actions\EditAction::make()->label('Editar')->button(),
+                Tables\Actions\Action::make('preview')
+                    ->label('Vista previa')
+                    ->icon('heroicon-o-eye')
+                    ->url(fn (Pagina $record): string => route('paginas.preview', $record))
+                    ->openUrlInNewTab(),
+                Tables\Actions\Action::make('mobile_preview')
+                    ->label('Vista móvil')
+                    ->icon('heroicon-o-device-phone-mobile')
+                    ->url(fn (Pagina $record): string => route('paginas.preview', ['pagina' => $record, 'device' => 'mobile']))
+                    ->openUrlInNewTab(),
+                Tables\Actions\Action::make('publish')
+                    ->label('Publicar')
+                    ->icon('heroicon-o-cloud-arrow-up')
+                    ->color('success')
+                    ->requiresConfirmation()
+                    ->modalHeading('Publicar página')
+                    ->modalDescription('Se enviará únicamente esta página. Las demás se conservarán como están en producción.')
+                    ->visible(fn (Pagina $record): bool => $record->activo && (! is_array(config('clicktap.publication_slugs')) || in_array($record->slug, config('clicktap.publication_slugs'), true)))
+                    ->action(function (Pagina $record): void {
+                        try {
+                            app(PublicationQueue::class)->request($record);
 
-                                Notification::make()
-                                    ->title('Publicación en cola')
-                                    ->body('Puedes seguir trabajando. Consulta el avance en Publicaciones.')
-                                    ->success()
-                                    ->send();
-                            } catch (Throwable $exception) {
-                                report($exception);
+                            Notification::make()
+                                ->title('Publicación en cola')
+                                ->body('Puedes seguir trabajando. Consulta el avance en Publicaciones.')
+                                ->success()
+                                ->send();
+                        } catch (Throwable $exception) {
+                            report($exception);
 
-                                Notification::make()
-                                    ->title('No se pudo publicar')
-                                    ->body($exception->getMessage())
-                                    ->danger()
-                                    ->send();
-                            }
-                        }),
-                    Tables\Actions\EditAction::make(),
-                ])->label('Acciones')->icon('heroicon-m-ellipsis-vertical')->button(),
+                            Notification::make()
+                                ->title('No se pudo publicar')
+                                ->body($exception->getMessage())
+                                ->danger()
+                                ->send();
+                        }
+                    }),
                 Tables\Actions\Action::make('public_page')
                     ->label('Ver página')
                     ->icon('heroicon-o-arrow-top-right-on-square')
-                    ->url(fn (Pagina $record): string => 'https://clicktap.app/'.rawurlencode($record->slug))
+                    ->url(fn (Pagina $record): string => rtrim((string) config('services.cloudflare.public_url', 'https://clicktap.app'), '/').'/'.rawurlencode($record->slug))
                     ->openUrlInNewTab()
-                    ->visible(fn (Pagina $record): bool => in_array($record->publicacion_estado, ['enviada', 'legado'], true)),
+                    ->visible(fn (Pagina $record): bool => $record->activo && in_array($record->publicacion_estado, ['enviada', 'legado', 'publicada'], true)),
             ]);
     }
 

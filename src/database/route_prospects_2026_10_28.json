@@ -1,0 +1,732 @@
+[
+  {
+    "order": 1,
+    "slug": "lipigas-jaime-castillo",
+    "name": "Lipigas Jaime Castillo",
+    "address": "Angol 1254, Concepción, Bío Bío",
+    "category": "Distribución de gas licuado",
+    "template": "fefigas",
+    "phone": "+56412238749",
+    "sources": [
+      "https://www.citiservi.cl/rubro/gases-en-concepcion",
+      "https://infogaschile.com/concepcion/lipigas-concepcion/"
+    ],
+    "research": {
+      "status": "not_found",
+      "reason": "Se requiere una única empresa que coincida en nombre, calle, número y ciudad.",
+      "candidates": [],
+      "fetched_at": "2026-10-28T23:55:54-03:00",
+      "source_url": "https://maps.google.com/maps?q=Lipigas+Jaime+Castillo+Angol+1254%2C+Concepci%C3%B3n%2C+B%C3%ADo+B%C3%ADo+Chile&output=embed&hl=es",
+      "google_search_url": "https://www.google.com/search?q=Lipigas+Jaime+Castillo+Angol+1254%2C+Concepci%C3%B3n%2C+B%C3%ADo+B%C3%ADo+Chile",
+      "social_search_url": "https://www.google.com/search?q=Lipigas+Jaime+Castillo+Concepci%C3%B3n+%28site%3Ainstagram.com+OR+site%3Afacebook.com+OR+site%3Atiktok.com%29",
+      "pending": [
+        "Confirmar logo y datos con el encargado antes de publicar.",
+        "Confirmar la ficha comercial de Google; no utilizar el Place ID candidato.",
+        "Buscar o confirmar redes y sitio web; Google no aportó un enlace."
+      ]
+    }
+  },
+  {
+    "order": 2,
+    "slug": "rebecar",
+    "name": "Rebecar · La Serviteca del Aceite",
+    "address": "Aníbal Pinto 1788, Concepción, Bío Bío",
+    "category": "Cambio de aceite",
+    "template": "ralph-service",
+    "phone": "+56990023056",
+    "sources": [
+      "https://www.cylex.cl/concepcion/rebecar-desde-1988-la-serviteca-del-aceite-11305257.html"
+    ],
+    "research": {
+      "status": "matched",
+      "place": {
+        "place_id": "ChIJk2yL3ty1aZYRJOvmlSEFOsQ",
+        "name": "REBECAR desde 1988 LA SERVITECA DEL ACEITE",
+        "address": "Anibal Pinto 1788, 4060985 Concepción, Bío Bío",
+        "category": "Servicio de cambio de aceite",
+        "phone": "+56990023056",
+        "website": null,
+        "website_type": null,
+        "rating": 4.6,
+        "review_count_label": "28 reseñas",
+        "opening_hours": {
+          "miércoles": "9:30 a. m.–6 p. m.",
+          "jueves": "9:30 a. m.–6 p. m.",
+          "viernes": "9:30 a. m.–6 p. m.",
+          "sábado": "10:30 a. m.–2 p. m.",
+          "domingo": "Cerrado",
+          "lunes": "9:30 a. m.–6 p. m.",
+          "martes": "9:30 a. m.–6 p. m."
+        },
+        "coordinates": [
+          -36.8133614,
+          -73.05805939999999
+        ],
+        "name_matches": true,
+        "address_matches": true,
+        "is_business": true
+      },
+      "fetched_at": "2026-10-28T23:55:55-03:00",
+      "source_url": "https://maps.google.com/maps?q=Rebecar+%C2%B7+La+Serviteca+del+Aceite+An%C3%ADbal+Pinto+1788%2C+Concepci%C3%B3n%2C+B%C3%ADo+B%C3%ADo+Chile&output=embed&hl=es",
+      "google_search_url": "https://www.google.com/search?q=Rebecar+%C2%B7+La+Serviteca+del+Aceite+An%C3%ADbal+Pinto+1788%2C+Concepci%C3%B3n%2C+B%C3%ADo+B%C3%ADo+Chile",
+      "social_search_url": "https://www.google.com/search?q=Rebecar+%C2%B7+La+Serviteca+del+Aceite+Concepci%C3%B3n+%28site%3Ainstagram.com+OR+site%3Afacebook.com+OR+site%3Atiktok.com%29",
+      "pending": [
+        "Confirmar logo y datos con el encargado antes de publicar.",
+        "Buscar o confirmar redes y sitio web; Google no aportó un enlace."
+      ]
+    }
+  },
+  {
+    "order": 3,
+    "slug": "maxtom-lubricantes",
+    "name": "Maxtom Lubricantes",
+    "address": "Rengo 1595, Concepción, Bío Bío",
+    "category": "Cambio de aceite y repuestos",
+    "template": "taller-80s",
+    "phone": "+56990989578",
+    "whatsapp": "+56990989578",
+    "sources": [
+      "https://mimecanico.cl/?v=ficha&slug=maxtom-lubricantes-concepcion"
+    ],
+    "research": {
+      "status": "matched",
+      "place": {
+        "place_id": "ChIJARQqCM61aZYRNOZeEBt1t28",
+        "name": "Maxtom lubricantes",
+        "address": "Rengo 1595, 4030000 Concepción, Bío Bío",
+        "category": "Fabricante de repuestos para automóviles",
+        "phone": "+56990989578",
+        "website": null,
+        "website_type": null,
+        "rating": 5,
+        "review_count_label": "1 reseña",
+        "opening_hours": {
+          "miércoles": "9 a. m.–7 p. m.",
+          "jueves": "9 a. m.–7 p. m.",
+          "viernes": "9 a. m.–7 p. m.",
+          "sábado": "9 a. m.–3 p. m.",
+          "domingo": "Cerrado",
+          "lunes": "9 a. m.–7 p. m.",
+          "martes": "9 a. m.–7 p. m."
+        },
+        "coordinates": [
+          -36.8164577,
+          -73.0595633
+        ],
+        "name_matches": true,
+        "address_matches": true,
+        "is_business": true
+      },
+      "fetched_at": "2026-10-28T23:55:55-03:00",
+      "source_url": "https://maps.google.com/maps?q=Maxtom+Lubricantes+Rengo+1595%2C+Concepci%C3%B3n%2C+B%C3%ADo+B%C3%ADo+Chile&output=embed&hl=es",
+      "google_search_url": "https://www.google.com/search?q=Maxtom+Lubricantes+Rengo+1595%2C+Concepci%C3%B3n%2C+B%C3%ADo+B%C3%ADo+Chile",
+      "social_search_url": "https://www.google.com/search?q=Maxtom+Lubricantes+Concepci%C3%B3n+%28site%3Ainstagram.com+OR+site%3Afacebook.com+OR+site%3Atiktok.com%29",
+      "pending": [
+        "Confirmar logo y datos con el encargado antes de publicar.",
+        "Buscar o confirmar redes y sitio web; Google no aportó un enlace."
+      ]
+    }
+  },
+  {
+    "order": 4,
+    "slug": "lubricentro-seguel",
+    "name": "Lubricentro Seguel",
+    "address": "Orompello 1838, Concepción, Bío Bío",
+    "category": "Lubricentro y cambio de aceite",
+    "template": "ralph-service",
+    "phone": "+56412914234",
+    "sources": [
+      "https://www.mercantil.com/empresa/lubricentro-seguel/concepcion/300251180/esp/",
+      "https://cl.todosnegocios.com/lubricentro-seguel-41-291-4234"
+    ],
+    "research": {
+      "status": "matched",
+      "place": {
+        "place_id": "ChIJ1QTmUiu0aZYRhMmmRkFrUJw",
+        "name": "Lubricentro Seguel",
+        "address": "Orompello 1838, 4030000 Concepción, Bío Bío",
+        "category": "Servicio de cambio de aceite",
+        "phone": "+56412914234",
+        "website": null,
+        "website_type": null,
+        "rating": 4.8,
+        "review_count_label": "19 reseñas",
+        "opening_hours": {
+          "miércoles": "9:15 a. m.–1:30 p. m. / 3:15–6:45 p. m.",
+          "jueves": "9:15 a. m.–1:30 p. m. / 3:15–6:45 p. m.",
+          "viernes": "9:15 a. m.–1:30 p. m. / 3:15–6:45 p. m.",
+          "sábado": "10 a. m.–1 p. m.",
+          "domingo": "Cerrado",
+          "lunes": "9:15 a. m.–1:30 p. m. / 3:15–6:45 p. m.",
+          "martes": "9:15 a. m.–1:30 p. m. / 3:15–6:45 p. m."
+        },
+        "coordinates": [
+          -36.8100937,
+          -73.05315279999999
+        ],
+        "name_matches": true,
+        "address_matches": true,
+        "is_business": true
+      },
+      "fetched_at": "2026-10-28T23:55:55-03:00",
+      "source_url": "https://maps.google.com/maps?q=Lubricentro+Seguel+Orompello+1838%2C+Concepci%C3%B3n%2C+B%C3%ADo+B%C3%ADo+Chile&output=embed&hl=es",
+      "google_search_url": "https://www.google.com/search?q=Lubricentro+Seguel+Orompello+1838%2C+Concepci%C3%B3n%2C+B%C3%ADo+B%C3%ADo+Chile",
+      "social_search_url": "https://www.google.com/search?q=Lubricentro+Seguel+Concepci%C3%B3n+%28site%3Ainstagram.com+OR+site%3Afacebook.com+OR+site%3Atiktok.com%29",
+      "pending": [
+        "Confirmar logo y datos con el encargado antes de publicar.",
+        "Buscar o confirmar redes y sitio web; Google no aportó un enlace."
+      ]
+    }
+  },
+  {
+    "order": 5,
+    "slug": "alta-bandera",
+    "name": "Alta Bandera Servicio Automotriz",
+    "address": "Tucapel 1498, Concepción, Bío Bío",
+    "category": "Servicio automotriz",
+    "template": "taller-80s",
+    "phone": "+56961516839",
+    "whatsapp": "+56961516839",
+    "sources": [
+      "https://mimecanico.cl/?v=ficha&slug=alta-bandera-servicio-automotriz-concepcion"
+    ],
+    "research": {
+      "status": "matched",
+      "place": {
+        "place_id": "ChIJ3V-xSmq1aZYRFcjRjq-3D_o",
+        "name": "ALTA BANDERA SERVICIO AUTOMOTRIZ",
+        "address": "Tucapel 1498, 4061061 Concepción, Bío Bío",
+        "category": "Taller de automóviles",
+        "phone": "+56961516839",
+        "website": "https://www.instagram.com/altabanderaccp/?hl=es",
+        "website_type": "instagram",
+        "rating": 5,
+        "review_count_label": "6 reseñas",
+        "opening_hours": {
+          "miércoles": "9 a. m.–7 p. m.",
+          "jueves": "9 a. m.–7 p. m.",
+          "viernes": "9 a. m.–7 p. m.",
+          "sábado": "9 a. m.–2 p. m.",
+          "domingo": "Cerrado",
+          "lunes": "9 a. m.–7 p. m.",
+          "martes": "9 a. m.–7 p. m."
+        },
+        "coordinates": [
+          -36.8145079,
+          -73.0524954
+        ],
+        "name_matches": true,
+        "address_matches": true,
+        "is_business": true
+      },
+      "fetched_at": "2026-10-28T23:55:56-03:00",
+      "source_url": "https://maps.google.com/maps?q=Alta+Bandera+Servicio+Automotriz+Tucapel+1498%2C+Concepci%C3%B3n%2C+B%C3%ADo+B%C3%ADo+Chile&output=embed&hl=es",
+      "google_search_url": "https://www.google.com/search?q=Alta+Bandera+Servicio+Automotriz+Tucapel+1498%2C+Concepci%C3%B3n%2C+B%C3%ADo+B%C3%ADo+Chile",
+      "social_search_url": "https://www.google.com/search?q=Alta+Bandera+Servicio+Automotriz+Concepci%C3%B3n+%28site%3Ainstagram.com+OR+site%3Afacebook.com+OR+site%3Atiktok.com%29",
+      "pending": [
+        "Confirmar logo y datos con el encargado antes de publicar."
+      ]
+    }
+  },
+  {
+    "order": 6,
+    "slug": "tutti-car",
+    "name": "Tutti Car Lubricentro",
+    "address": "Ejército 1265, Concepción, Bío Bío",
+    "category": "Lubricentro",
+    "template": "ralph-service",
+    "phone": "+56951489245",
+    "sources": [
+      "https://lubricentroschile.cl/region-del-bio-bio/concepcion/tutti-car-lubricentro/"
+    ],
+    "research": {
+      "status": "needs_review",
+      "reason": "Se requiere una única empresa que coincida en nombre, calle, número y ciudad.",
+      "candidates": [
+        {
+          "place_id": "ChIJcY7QsJC1aZYRXdELE3i0QBw",
+          "name": "Lubricentro, Automotora Leslie Figueroa",
+          "address": "Ejército 1265, 4060716 Concepción, Bío Bío",
+          "category": "Servicio de cambio de aceite",
+          "phone": null,
+          "website": null,
+          "website_type": null,
+          "rating": 4.4,
+          "review_count_label": "67 reseñas",
+          "opening_hours": {
+            "jueves": "9 a. m.–6:30 p. m.",
+            "viernes": "9 a. m.–6:30 p. m.",
+            "sábado": "9 a. m.–2 p. m.",
+            "domingo": "Cerrado",
+            "lunes": "9 a. m.–6:30 p. m.",
+            "martes": "9 a. m.–6:30 p. m.",
+            "miércoles": "9 a. m.–6:30 p. m."
+          },
+          "coordinates": [
+            -36.8097891,
+            -73.0515633
+          ],
+          "name_matches": false,
+          "address_matches": true,
+          "is_business": true
+        }
+      ],
+      "fetched_at": "2026-10-29T00:10:14-03:00",
+      "source_url": "https://maps.google.com/maps?q=Tutti+Car+Lubricentro+Ej%C3%A9rcito+1265%2C+Concepci%C3%B3n%2C+B%C3%ADo+B%C3%ADo+Chile&output=embed&hl=es",
+      "google_search_url": "https://www.google.com/search?q=Tutti+Car+Lubricentro+Ej%C3%A9rcito+1265%2C+Concepci%C3%B3n%2C+B%C3%ADo+B%C3%ADo+Chile",
+      "social_search_url": "https://www.google.com/search?q=Tutti+Car+Lubricentro+Concepci%C3%B3n+%28site%3Ainstagram.com+OR+site%3Afacebook.com+OR+site%3Atiktok.com%29",
+      "pending": [
+        "Confirmar logo y datos con el encargado antes de publicar.",
+        "Confirmar la ficha comercial de Google; no utilizar el Place ID candidato.",
+        "Buscar o confirmar redes y sitio web; Google no aportó un enlace."
+      ]
+    },
+    "verification_notes": [
+      "Google muestra «Lubricentro, Automotora Leslie Figueroa» en esta dirección. Confirmar el nombre actual con el encargado."
+    ]
+  },
+  {
+    "order": 7,
+    "slug": "10-car",
+    "name": "10 Car Mecánica Automotriz Integral",
+    "address": "Ejército 1507, Concepción, Bío Bío",
+    "category": "Mecánica automotriz",
+    "template": "taller-80s",
+    "phone": "+56967321422",
+    "sources": [
+      "https://localchile.net/negocio/10-car-mecanica-automotriz-integral-concepcion"
+    ],
+    "research": {
+      "status": "matched",
+      "place": {
+        "place_id": "ChIJrzvHkA21aZYRFzBI1SUmLiI",
+        "name": "10 Car \"Mecanica Automotriz Integral\"",
+        "address": "Barrio Nortecon - Ejército 1507, 4030000 Concepción, Bío Bío",
+        "category": "Taller de reparación de automóviles",
+        "phone": "+56967321422",
+        "website": null,
+        "website_type": null,
+        "rating": 4.6,
+        "review_count_label": "11 reseñas",
+        "opening_hours": {
+          "jueves": "8:30 a. m.–2 p. m. / 3–6:30 p. m.",
+          "viernes": "8:30 a. m.–2 p. m. / 3–6:30 p. m.",
+          "sábado": "Cerrado",
+          "domingo": "Cerrado",
+          "lunes": "8:30 a. m.–2 p. m. / 3–6:30 p. m.",
+          "martes": "8:30 a. m.–2 p. m. / 3–6:30 p. m.",
+          "miércoles": "8:30 a. m.–2 p. m. / 3–6:30 p. m."
+        },
+        "coordinates": [
+          -36.8085387,
+          -73.0483023
+        ],
+        "name_matches": true,
+        "address_matches": true,
+        "is_business": true
+      },
+      "fetched_at": "2026-10-29T00:10:15-03:00",
+      "source_url": "https://maps.google.com/maps?q=10+Car+Mec%C3%A1nica+Automotriz+Integral+Ej%C3%A9rcito+1507%2C+Concepci%C3%B3n%2C+B%C3%ADo+B%C3%ADo+Chile&output=embed&hl=es",
+      "google_search_url": "https://www.google.com/search?q=10+Car+Mec%C3%A1nica+Automotriz+Integral+Ej%C3%A9rcito+1507%2C+Concepci%C3%B3n%2C+B%C3%ADo+B%C3%ADo+Chile",
+      "social_search_url": "https://www.google.com/search?q=10+Car+Mec%C3%A1nica+Automotriz+Integral+Concepci%C3%B3n+%28site%3Ainstagram.com+OR+site%3Afacebook.com+OR+site%3Atiktok.com%29",
+      "pending": [
+        "Confirmar logo y datos con el encargado antes de publicar.",
+        "Buscar o confirmar redes y sitio web; Google no aportó un enlace."
+      ]
+    }
+  },
+  {
+    "order": 8,
+    "slug": "don-edison-mecanico",
+    "name": "Don Edison Mecánico",
+    "address": "Janequeo 1680, Concepción, Bío Bío",
+    "category": "Mecánica automotriz",
+    "template": "ralph-service",
+    "phone": null,
+    "sources": [
+      "https://mimecanico.cl/"
+    ],
+    "research": {
+      "status": "matched",
+      "place": {
+        "place_id": "ChIJZZ-u8La1aZYR39-Jz_qyWAY",
+        "name": "Don Edison Mecánico",
+        "address": "Janequeo 1680, 4060792 Concepción, Bío Bío",
+        "category": "Taller mecánico",
+        "phone": null,
+        "website": null,
+        "website_type": null,
+        "rating": 4.2,
+        "review_count_label": "6 reseñas",
+        "opening_hours": [],
+        "coordinates": [
+          -36.8106715,
+          -73.0485075
+        ],
+        "name_matches": true,
+        "address_matches": true,
+        "is_business": true
+      },
+      "fetched_at": "2026-10-29T00:10:15-03:00",
+      "source_url": "https://maps.google.com/maps?q=Don+Edison+Mec%C3%A1nico+Janequeo+1680%2C+Concepci%C3%B3n%2C+B%C3%ADo+B%C3%ADo+Chile&output=embed&hl=es",
+      "google_search_url": "https://www.google.com/search?q=Don+Edison+Mec%C3%A1nico+Janequeo+1680%2C+Concepci%C3%B3n%2C+B%C3%ADo+B%C3%ADo+Chile",
+      "social_search_url": "https://www.google.com/search?q=Don+Edison+Mec%C3%A1nico+Concepci%C3%B3n+%28site%3Ainstagram.com+OR+site%3Afacebook.com+OR+site%3Atiktok.com%29",
+      "pending": [
+        "Confirmar logo y datos con el encargado antes de publicar.",
+        "Buscar o confirmar redes y sitio web; Google no aportó un enlace."
+      ]
+    }
+  },
+  {
+    "order": 9,
+    "slug": "radiadores-el-indio",
+    "name": "Radiadores El Indio",
+    "address": "Lautaro 1802, Concepción, Bío Bío",
+    "category": "Reparación de radiadores",
+    "template": "taller-80s",
+    "phone": "+56997781403",
+    "sources": [
+      "https://chilopina.com/taller-de-reparacion-de-automoviles/concepcion/radiadores-el-indio/"
+    ],
+    "research": {
+      "status": "matched",
+      "place": {
+        "place_id": "ChIJ85IHzLa1aZYRjkj5z_OEHlo",
+        "name": "RADIADORES EL INDIO",
+        "address": "Lautaro 1802, 4060434 Concepción, Bío Bío",
+        "category": "Taller mecánico",
+        "phone": "+56997781403",
+        "website": null,
+        "website_type": null,
+        "rating": 4.5,
+        "review_count_label": "61 reseñas",
+        "opening_hours": {
+          "jueves": "10 a. m.–2 p. m. / 3–7 p. m.",
+          "viernes": "10 a. m.–2 p. m. / 3–7 p. m.",
+          "sábado": "Cerrado",
+          "domingo": "Cerrado",
+          "lunes": "10 a. m.–2 p. m. / 3–7 p. m.",
+          "martes": "10 a. m.–2 p. m. / 3–7 p. m.",
+          "miércoles": "10 a. m.–2 p. m. / 3–7 p. m."
+        },
+        "coordinates": [
+          -36.8083981,
+          -73.0483215
+        ],
+        "name_matches": true,
+        "address_matches": true,
+        "is_business": true
+      },
+      "fetched_at": "2026-10-29T00:10:15-03:00",
+      "source_url": "https://maps.google.com/maps?q=Radiadores+El+Indio+Lautaro+1802%2C+Concepci%C3%B3n%2C+B%C3%ADo+B%C3%ADo+Chile&output=embed&hl=es",
+      "google_search_url": "https://www.google.com/search?q=Radiadores+El+Indio+Lautaro+1802%2C+Concepci%C3%B3n%2C+B%C3%ADo+B%C3%ADo+Chile",
+      "social_search_url": "https://www.google.com/search?q=Radiadores+El+Indio+Concepci%C3%B3n+%28site%3Ainstagram.com+OR+site%3Afacebook.com+OR+site%3Atiktok.com%29",
+      "pending": [
+        "Confirmar logo y datos con el encargado antes de publicar.",
+        "Buscar o confirmar redes y sitio web; Google no aportó un enlace."
+      ]
+    }
+  },
+  {
+    "order": 10,
+    "slug": "henri-car",
+    "name": "Henri Car",
+    "address": "Lautaro 1910, Concepción, Bío Bío",
+    "category": "Servicio automotriz",
+    "template": "ralph-service",
+    "phone": null,
+    "sources": [
+      "https://mimecanico.cl/"
+    ],
+    "research": {
+      "status": "matched",
+      "place": {
+        "place_id": "ChIJu6QvhoO1aZYRm6SrAVgtoHQ",
+        "name": "Henri car",
+        "address": "Lautaro 1910, 4030000 Concepción, Bío Bío",
+        "category": "Taller de revisión de automóviles",
+        "phone": "+56999917486",
+        "website": null,
+        "website_type": null,
+        "rating": 4.7,
+        "review_count_label": "50 reseñas",
+        "opening_hours": {
+          "jueves": "9 a. m.–1:30 p. m. / 3–7 p. m.",
+          "viernes": "9 a. m.–1:30 p. m. / 3–7 p. m.",
+          "sábado": "9 a. m.–1 p. m.",
+          "domingo": "Cerrado",
+          "lunes": "9 a. m.–1:30 p. m. / 3–7 p. m.",
+          "martes": "9 a. m.–1:30 p. m. / 3–7 p. m.",
+          "miércoles": "9 a. m.–7 p. m."
+        },
+        "coordinates": [
+          -36.8074465,
+          -73.048993
+        ],
+        "name_matches": true,
+        "address_matches": true,
+        "is_business": true
+      },
+      "fetched_at": "2026-10-29T00:10:16-03:00",
+      "source_url": "https://maps.google.com/maps?q=Henri+Car+Lautaro+1910%2C+Concepci%C3%B3n%2C+B%C3%ADo+B%C3%ADo+Chile&output=embed&hl=es",
+      "google_search_url": "https://www.google.com/search?q=Henri+Car+Lautaro+1910%2C+Concepci%C3%B3n%2C+B%C3%ADo+B%C3%ADo+Chile",
+      "social_search_url": "https://www.google.com/search?q=Henri+Car+Concepci%C3%B3n+%28site%3Ainstagram.com+OR+site%3Afacebook.com+OR+site%3Atiktok.com%29",
+      "pending": [
+        "Confirmar logo y datos con el encargado antes de publicar.",
+        "Buscar o confirmar redes y sitio web; Google no aportó un enlace."
+      ]
+    }
+  },
+  {
+    "order": 11,
+    "slug": "moreno-munoz",
+    "name": "Moreno Muñoz",
+    "address": "Lautaro 1971, Concepción, Bío Bío",
+    "category": "Servicio automotriz",
+    "template": "taller-80s",
+    "phone": "+56412913724",
+    "sources": [
+      "https://www.waze.com/live-map/directions/chile/bio-bio/concepcion/moreno-munoz-cristian-dario?to=place.ChIJaSqW4bC1aZYRvl-Qr7Wa-RE"
+    ],
+    "research": {
+      "status": "matched",
+      "place": {
+        "place_id": "ChIJaSqW4bC1aZYRvl-Qr7Wa-RE",
+        "name": "Moreno Munoz Cristian Dario",
+        "address": "Lautaro 1971, 4060303 Concepción, Bío Bío",
+        "category": "Taller de revisión de automóviles",
+        "phone": "+56412913724",
+        "website": null,
+        "website_type": null,
+        "rating": 4.8,
+        "review_count_label": "124 reseñas",
+        "opening_hours": {
+          "jueves": "9 a. m.–1 p. m. / 3–6 p. m.",
+          "viernes": "9 a. m.–1 p. m. / 3–6 p. m.",
+          "sábado": "9 a. m.–1 p. m.",
+          "domingo": "Cerrado",
+          "lunes": "9 a. m.–1 p. m. / 3–6 p. m.",
+          "martes": "9 a. m.–1 p. m. / 3–6 p. m.",
+          "miércoles": "9 a. m.–1 p. m. / 3–6 p. m."
+        },
+        "coordinates": [
+          -36.8070488,
+          -73.0496833
+        ],
+        "name_matches": true,
+        "address_matches": true,
+        "is_business": true
+      },
+      "fetched_at": "2026-10-29T00:10:16-03:00",
+      "source_url": "https://maps.google.com/maps?q=Moreno+Mu%C3%B1oz+Lautaro+1971%2C+Concepci%C3%B3n%2C+B%C3%ADo+B%C3%ADo+Chile&output=embed&hl=es",
+      "google_search_url": "https://www.google.com/search?q=Moreno+Mu%C3%B1oz+Lautaro+1971%2C+Concepci%C3%B3n%2C+B%C3%ADo+B%C3%ADo+Chile",
+      "social_search_url": "https://www.google.com/search?q=Moreno+Mu%C3%B1oz+Concepci%C3%B3n+%28site%3Ainstagram.com+OR+site%3Afacebook.com+OR+site%3Atiktok.com%29",
+      "pending": [
+        "Confirmar logo y datos con el encargado antes de publicar.",
+        "Buscar o confirmar redes y sitio web; Google no aportó un enlace."
+      ]
+    }
+  },
+  {
+    "order": 12,
+    "slug": "celmi-motos",
+    "name": "Celmi'Motos",
+    "address": "Juan de Dios Rivera 1915, Concepción, Bío Bío",
+    "category": "Servicio de motos",
+    "template": "ralph-service",
+    "phone": null,
+    "sources": [
+      "https://mimecanico.cl/"
+    ],
+    "research": {
+      "status": "matched",
+      "place": {
+        "place_id": "ChIJtaE5U6S1aZYRJWJiXcKuKkY",
+        "name": "Celmi'Motos",
+        "address": "Juan de Dios Rivera 1915, 4061378 Concepción, Bío Bío",
+        "category": "Taller mecánico",
+        "phone": "+56952265793",
+        "website": null,
+        "website_type": null,
+        "rating": 4.5,
+        "review_count_label": "21 reseñas",
+        "opening_hours": {
+          "jueves": "11 a. m.–7:30 p. m.",
+          "viernes": "11 a. m.–7:30 p. m.",
+          "sábado": "Cerrado",
+          "domingo": "Cerrado",
+          "lunes": "11 a. m.–7:30 p. m.",
+          "martes": "11 a. m.–7:30 p. m.",
+          "miércoles": "11 a. m.–7:30 p. m."
+        },
+        "coordinates": [
+          -36.8055496,
+          -73.0431308
+        ],
+        "name_matches": true,
+        "address_matches": true,
+        "is_business": true
+      },
+      "fetched_at": "2026-10-29T00:10:17-03:00",
+      "source_url": "https://maps.google.com/maps?q=Celmi%27Motos+Juan+de+Dios+Rivera+1915%2C+Concepci%C3%B3n%2C+B%C3%ADo+B%C3%ADo+Chile&output=embed&hl=es",
+      "google_search_url": "https://www.google.com/search?q=Celmi%27Motos+Juan+de+Dios+Rivera+1915%2C+Concepci%C3%B3n%2C+B%C3%ADo+B%C3%ADo+Chile",
+      "social_search_url": "https://www.google.com/search?q=Celmi%27Motos+Concepci%C3%B3n+%28site%3Ainstagram.com+OR+site%3Afacebook.com+OR+site%3Atiktok.com%29",
+      "pending": [
+        "Confirmar logo y datos con el encargado antes de publicar.",
+        "Buscar o confirmar redes y sitio web; Google no aportó un enlace."
+      ]
+    }
+  },
+  {
+    "order": 13,
+    "slug": "digasol",
+    "name": "Digasol",
+    "address": "Paicaví 1835, Concepción, Bío Bío",
+    "category": "Gases industriales y medicinales",
+    "template": "fefigas",
+    "phone": "+56412229866",
+    "sources": [
+      "https://cl.todosnegocios.com/gases-industriales-y-medicinales-41-222-9866"
+    ],
+    "research": {
+      "status": "needs_review",
+      "reason": "Se requiere una única empresa que coincida en nombre, calle, número y ciudad.",
+      "candidates": [
+        {
+          "place_id": "ChIJPXYhRre1aZYRGa29-V0vhfo",
+          "name": "Paicaví 1835",
+          "address": "Paicaví 1835, 4060719 Concepción, Bío Bío",
+          "category": null,
+          "phone": null,
+          "website": null,
+          "website_type": null,
+          "rating": null,
+          "review_count_label": null,
+          "opening_hours": [],
+          "coordinates": [
+            -36.8095823,
+            -73.0511116
+          ],
+          "name_matches": false,
+          "address_matches": true,
+          "is_business": false
+        }
+      ],
+      "fetched_at": "2026-10-29T00:10:17-03:00",
+      "source_url": "https://maps.google.com/maps?q=Digasol+Paicav%C3%AD+1835%2C+Concepci%C3%B3n%2C+B%C3%ADo+B%C3%ADo+Chile&output=embed&hl=es",
+      "google_search_url": "https://www.google.com/search?q=Digasol+Paicav%C3%AD+1835%2C+Concepci%C3%B3n%2C+B%C3%ADo+B%C3%ADo+Chile",
+      "social_search_url": "https://www.google.com/search?q=Digasol+Concepci%C3%B3n+%28site%3Ainstagram.com+OR+site%3Afacebook.com+OR+site%3Atiktok.com%29",
+      "pending": [
+        "Confirmar logo y datos con el encargado antes de publicar.",
+        "Confirmar la ficha comercial de Google; no utilizar el Place ID candidato.",
+        "Buscar o confirmar redes y sitio web; Google no aportó un enlace."
+      ]
+    },
+    "verification_notes": [
+      "La búsqueda de Google devolvió una dirección, no una ficha de empresa. Confirmar que Digasol sigue atendiendo aquí."
+    ]
+  },
+  {
+    "order": 14,
+    "slug": "full-center-car-service",
+    "name": "Full Center Car Service",
+    "address": "Paicaví 2092, Concepción, Bío Bío",
+    "category": "Taller mecánico",
+    "template": "taller-80s",
+    "phone": "+56413121677",
+    "sources": [
+      "https://www.waze.com/live-map/directions/cl/bio-bio/concepcion/full-center-car-service-taller-mecanico-en-concepcion?to=place.ChIJ53nbfrq1aZYRtYZbReA4748",
+      "https://cl.todosnegocios.com/full-center-car-service-taller-mec%C3%A1nico-41-312-1677"
+    ],
+    "research": {
+      "status": "matched",
+      "place": {
+        "place_id": "ChIJ53nbfrq1aZYRtYZbReA4748",
+        "name": "Full Center Car Service - Taller Mecánico en Concepción",
+        "address": "Paicaví 2092, 4030000 Concepción, Bío Bío",
+        "category": "Taller mecánico",
+        "phone": "+56413121677",
+        "website": null,
+        "website_type": null,
+        "rating": 4.2,
+        "review_count_label": "52 reseñas",
+        "opening_hours": [],
+        "coordinates": [
+          -36.8069529,
+          -73.0523967
+        ],
+        "name_matches": true,
+        "address_matches": true,
+        "is_business": true
+      },
+      "fetched_at": "2026-10-29T00:10:17-03:00",
+      "source_url": "https://maps.google.com/maps?q=Full+Center+Car+Service+Paicav%C3%AD+2092%2C+Concepci%C3%B3n%2C+B%C3%ADo+B%C3%ADo+Chile&output=embed&hl=es",
+      "google_search_url": "https://www.google.com/search?q=Full+Center+Car+Service+Paicav%C3%AD+2092%2C+Concepci%C3%B3n%2C+B%C3%ADo+B%C3%ADo+Chile",
+      "social_search_url": "https://www.google.com/search?q=Full+Center+Car+Service+Concepci%C3%B3n+%28site%3Ainstagram.com+OR+site%3Afacebook.com+OR+site%3Atiktok.com%29",
+      "pending": [
+        "Confirmar logo y datos con el encargado antes de publicar.",
+        "Buscar o confirmar redes y sitio web; Google no aportó un enlace."
+      ]
+    },
+    "verification_notes": [
+      "TodosNegocios marca este local como cerrado. Verificar su funcionamiento antes de realizar la visita."
+    ]
+  },
+  {
+    "order": 15,
+    "slug": "lipigas-benito-henriquez",
+    "name": "Distribuidor Lipigas Benito Henríquez",
+    "address": "Montriou 1375, Concepción, Bío Bío",
+    "category": "Distribución de gas licuado",
+    "template": "fefigas",
+    "phone": null,
+    "sources": [
+      "https://www.mercantil.com/empresa/distribuidor-de-gas-autorizado-lipigas-benito-henriquez/concepcion/300342874/esp/"
+    ],
+    "research": {
+      "status": "needs_review",
+      "reason": "Se requiere una única empresa que coincida en nombre, calle, número y ciudad.",
+      "candidates": [
+        {
+          "place_id": "ChIJa5P-noK1aZYRdxqWPKN2-5U",
+          "name": "LipiVecino",
+          "address": "Hugo Montriou 1375, SECTOR BARRIO NORTE, 4060291 Concepción, Bío Bío",
+          "category": "Compañía del gas",
+          "phone": "+56226631107",
+          "website": "https://lipigas.cl/lipivecino/",
+          "website_type": "web",
+          "rating": 3.1,
+          "review_count_label": "21 reseñas",
+          "opening_hours": {
+            "jueves": "9 a. m.–7 p. m.",
+            "viernes": "9 a. m.–7 p. m.",
+            "sábado": "9 a. m.–7 p. m.",
+            "domingo": "9 a. m.–5 p. m.",
+            "lunes": "9 a. m.–7 p. m.",
+            "martes": "9 a. m.–7 p. m.",
+            "miércoles": "9 a. m.–7 p. m."
+          },
+          "coordinates": [
+            -36.8072576,
+            -73.0514212
+          ],
+          "name_matches": false,
+          "address_matches": true,
+          "is_business": true
+        }
+      ],
+      "fetched_at": "2026-10-29T00:10:18-03:00",
+      "source_url": "https://maps.google.com/maps?q=Distribuidor+Lipigas+Benito+Henr%C3%ADquez+Montriou+1375%2C+Concepci%C3%B3n%2C+B%C3%ADo+B%C3%ADo+Chile&output=embed&hl=es",
+      "google_search_url": "https://www.google.com/search?q=Distribuidor+Lipigas+Benito+Henr%C3%ADquez+Montriou+1375%2C+Concepci%C3%B3n%2C+B%C3%ADo+B%C3%ADo+Chile",
+      "social_search_url": "https://www.google.com/search?q=Distribuidor+Lipigas+Benito+Henr%C3%ADquez+Concepci%C3%B3n+%28site%3Ainstagram.com+OR+site%3Afacebook.com+OR+site%3Atiktok.com%29",
+      "pending": [
+        "Confirmar logo y datos con el encargado antes de publicar.",
+        "Confirmar la ficha comercial de Google; no utilizar el Place ID candidato.",
+        "Buscar o confirmar redes y sitio web; Google no aportó un enlace."
+      ]
+    },
+    "verification_notes": [
+      "Google muestra «LipiVecino» en Montriou 1375. Confirmar su relación con Benito Henríquez y el contacto local."
+    ]
+  }
+]

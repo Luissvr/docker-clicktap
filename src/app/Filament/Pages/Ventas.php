@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Actions\RejectSaleAction;
 use App\Support\BusinessLedger;
 use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\Grid;
@@ -35,6 +36,8 @@ class Ventas extends Page implements HasForms
     public ?string $ventaId = null;
 
     public array $data = [];
+
+    public string $rejectionReason = '';
 
     public function form(Form $form): Form
     {
@@ -205,6 +208,22 @@ class Ventas extends Page implements HasForms
 
         Notification::make()->success()->title('Borrador eliminado')->send();
         $this->redirect(static::getUrl(), navigate: true);
+    }
+
+    public function rejectSale(): void
+    {
+        abort_unless($this->ventaId, 404);
+        $page = app(RejectSaleAction::class)->handle(auth()->user(), $this->ventaId, $this->rejectionReason);
+
+        Notification::make()
+            ->warning()
+            ->title($page ? 'Página desactivada; retirada pública pendiente' : 'Venta marcada como no concretada')
+            ->body($page ? 'Consulta Publicaciones para seguir la retirada. No se ajustaron pagos ni tarjetas entregadas.' : 'Se conservó el historial de la venta.')
+            ->send();
+
+        $this->redirect($page
+            ? PublicacionesSitio::getUrl(['search' => $page->slug])
+            : static::getUrl(['venta' => $this->ventaId]), navigate: true);
     }
 
     private function saveSaleDetails(string $saleId, array $data): void

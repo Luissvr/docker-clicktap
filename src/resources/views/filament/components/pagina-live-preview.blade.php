@@ -3,6 +3,57 @@
 @endphp
 
 <div class="ct-live-preview-wrapper flex flex-col items-center w-full py-2 select-none" wire:init="loadPagePreview">
+    <div class="w-full mb-4 text-center"
+        x-data="{
+            opening: false,
+            error: '',
+            async openFinalPreview() {
+                if (this.opening) return;
+                this.error = '';
+                const preview = window.open('', '_blank');
+                if (!preview) {
+                    this.error = 'Permite abrir ventanas emergentes para ver la vista final.';
+                    return;
+                }
+                preview.opener = null;
+                preview.document.title = 'Preparando vista final…';
+                preview.document.body.textContent = 'Preparando vista final…';
+                this.opening = true;
+                try {
+                    const html = await this.$wire.renderFinalPagePreview();
+                    if (preview.closed) return;
+                    const documentPreview = new DOMParser().parseFromString(html, 'text/html');
+                    for (const element of documentPreview.querySelectorAll('img[src], link[href]')) {
+                        const attribute = element.tagName === 'IMG' ? 'src' : 'href';
+                        element.setAttribute(attribute, new URL(element.getAttribute(attribute), window.location.href).href);
+                    }
+                    preview.document.open();
+                    preview.document.write('<!DOCTYPE html>' + documentPreview.documentElement.outerHTML);
+                    preview.document.close();
+                } catch (_) {
+                    preview.close();
+                    this.error = 'No se pudo abrir la vista final. Inténtalo nuevamente.';
+                } finally {
+                    this.opening = false;
+                }
+            }
+        }"
+    >
+        <x-filament::button
+            type="button"
+            color="gray"
+            icon="heroicon-o-arrow-top-right-on-square"
+            x-on:click="openFinalPreview()"
+            x-bind:disabled="opening"
+            class="w-full"
+        >
+            <span class="inline-flex items-center gap-2">
+                <x-filament::loading-indicator x-cloak x-show="opening" class="h-4 w-4" aria-hidden="true" />
+                Abrir vista final
+            </span>
+        </x-filament::button>
+        <p x-cloak x-show="error" x-text="error" role="alert" class="mt-2 text-sm text-danger-600"></p>
+    </div>
     <div class="relative w-full max-w-[340px] rounded-[42px] p-[10px] bg-[#1a1f26] shadow-2xl ring-1 ring-black/15 dark:ring-white/10">
         <div class="absolute top-[18px] left-1/2 -translate-x-1/2 w-24 h-4 bg-black rounded-full z-20 flex items-center justify-end pr-2.5 pointer-events-none">
             <div class="w-2.5 h-2.5 rounded-full bg-[#111827] ring-1 ring-gray-800"></div>

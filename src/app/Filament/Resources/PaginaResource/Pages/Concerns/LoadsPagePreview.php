@@ -20,4 +20,13 @@ trait LoadsPagePreview
     {
         $this->loadPagePreview();
     }
+
+    public function renderFinalPagePreview(): string
+    {
+        return PagePreviewCompiler::compile(
+            $this->data ?? [],
+            $this->form->getRecord(),
+            standalone: true,
+        );
+    }
 }

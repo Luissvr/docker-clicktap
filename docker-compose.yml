@@ -34,6 +34,14 @@ services:
     depends_on:
       - app
 
+  scheduler:
+    <<: *php-service
+    container_name: clicktap_scheduler
+    user: www-data
+    command: sh -c "until [ -f vendor/autoload.php ]; do sleep 2; done; php artisan schedule:work"
+    depends_on:
+      - app
+
   web:
     image: nginx:alpine
     container_name: clicktap_web

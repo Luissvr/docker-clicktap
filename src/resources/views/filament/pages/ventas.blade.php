@@ -6,7 +6,7 @@
         <section class="space-y-6">
             <div class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#DCE0D5] bg-white p-4 sm:p-6">
                 <div>
-                    <p class="text-sm text-[#596052]">{{ $isDraft ? 'Venta en preparación' : 'Venta confirmada' }}</p>
+                    <p class="text-sm text-[#596052]">{{ match ($sale->estado) { 'borrador' => 'Venta en preparación', 'confirmada' => 'Venta confirmada', 'rechazada' => 'Cliente no continúa', 'cancelacion_pendiente' => 'Cancelación comercial pendiente', default => ucfirst($sale->estado) } }}</p>
                     <h2 class="mt-1 text-xl font-semibold text-[#101010]">{{ $sale->cliente_nombre ?: 'Cliente pendiente' }}</h2>
                     <p class="mt-1 text-sm text-[#596052]">Creada {{ \Illuminate\Support\Carbon::parse($sale->created_at)->timezone('America/Santiago')->format('d/m/Y H:i') }}</p>
                 </div>
@@ -46,7 +46,7 @@
                     @if ($isDraft)
                         {{ $this->form }}
                     @else
-                        <p class="text-sm text-[#596052]">Esta venta quedó confirmada y el stock ya fue descontado.</p>
+                        <p class="text-sm text-[#596052]">{{ $sale->estado === 'confirmada' || $sale->estado === 'cancelacion_pendiente' ? 'El stock de esta venta ya fue descontado. Una devolución física y un reembolso requieren registros separados.' : 'El cliente no continuó con esta venta. Se conserva su historial.' }}</p>
                         <p class="mt-2 text-sm text-[#596052]">Cliente: {{ $sale->cliente_nombre ?: 'Sin nombre' }}</p>
                         @if ($sale->local_nombre)
                             <p class="mt-1 text-sm text-[#596052]">Local: {{ $sale->local_nombre }}</p>
@@ -76,6 +76,19 @@
                     <x-filament::button wire:confirm="¿Eliminar este borrador de venta? La página se conservará." wire:click="deleteDraft" color="danger" icon="heroicon-o-trash" class="w-full">Eliminar borrador</x-filament::button>
                 </div>
             @endif
+            @if (in_array($sale->estado, ['borrador', 'confirmada'], true))
+                <section class="rounded-xl border border-[#DCE0D5] bg-white p-4 sm:p-6">
+                    <h3 class="font-semibold text-[#101010]">Si el cliente no continúa</h3>
+                    <p class="mt-1 text-sm text-[#596052]">La página se desactivará y se solicitará retirar su acceso público. El sitio puede seguir visible hasta confirmar el despliegue. Los pagos y las tarjetas entregadas se resuelven por separado.</p>
+                    <label for="sale-rejection-reason" class="mt-4 block text-sm font-medium text-[#101010]">Motivo</label>
+                    <textarea id="sale-rejection-reason" wire:model="rejectionReason" rows="3" maxlength="500" placeholder="Describe por qué no se concretó la venta" class="mt-1 block w-full rounded-lg border-[#DCE0D5]" aria-describedby="sale-rejection-help"></textarea>
+                    <p id="sale-rejection-help" class="mt-1 text-xs text-[#596052]">El motivo queda en el historial interno.</p>
+                    @error('rejectionReason') <p class="mt-1 text-sm text-[#B70000]" role="alert">{{ $message }}</p> @enderror
+                    <x-filament::button wire:click="rejectSale" wire:confirm="¿Marcar que el cliente no continúa y solicitar la retirada de su página?" wire:loading.attr="disabled" wire:target="rejectSale" color="danger" class="mt-4 min-h-11 w-full sm:w-auto">Cliente no continúa · retirar acceso</x-filament::button>
+                </section>
+            @elseif ($sale->estado === 'cancelacion_pendiente')
+                <p class="rounded-xl border border-[#DCE0D5] bg-white p-4 text-sm text-[#596052]">La página está desactivada. Revisa la retirada en Publicaciones y registra aparte cualquier devolución de tarjetas o dinero.</p>
+            @endif
         </section>
     @else
         <section class="grid gap-8">
@@ -103,7 +116,7 @@
                                     <p class="mt-1 truncate text-sm text-[#596052]">{{ $saleRow->local_nombre ?: 'Local pendiente' }}</p>
                                     <p class="mt-1 truncate text-xs text-[#596052]">{{ $saleRow->pagina_nombre ?: 'Página pendiente' }}</p>
                                 </div>
-                                <span @class(['shrink-0 rounded-full px-3 py-1 text-xs font-medium', 'bg-[#F1F5E9] text-[#375500]' => $saleRow->estado === 'confirmada', 'bg-[#FFF7DB] text-[#854D0E]' => $saleRow->estado === 'borrador'])>{{ $saleRow->estado === 'confirmada' ? 'Confirmada' : 'Borrador' }}</span>
+                                <span @class(['shrink-0 rounded-full px-3 py-1 text-xs font-medium', 'bg-[#F1F5E9] text-[#375500]' => $saleRow->estado === 'confirmada', 'bg-[#FFF7DB] text-[#854D0E]' => $saleRow->estado === 'borrador', 'bg-[#FEE2E2] text-[#991B1B]' => in_array($saleRow->estado, ['rechazada', 'cancelacion_pendiente'], true)])>{{ match ($saleRow->estado) { 'borrador' => 'Borrador', 'confirmada' => 'Confirmada', 'rechazada' => 'No concretada', 'cancelacion_pendiente' => 'Cancelación pendiente', default => ucfirst($saleRow->estado) } }}</span>
                             </div>
                             <div class="mt-4 flex items-end justify-between gap-3">
                                 <div>

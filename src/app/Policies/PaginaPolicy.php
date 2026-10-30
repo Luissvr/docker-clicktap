@@ -24,7 +24,7 @@ class PaginaPolicy
 
     public function update(User $user, Pagina $pagina): bool
     {
-        return $user->activo;
+        return $user->activo && $pagina->papelera_en === null;
     }
 
     public function delete(User $user, Pagina $pagina): bool

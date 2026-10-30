@@ -275,6 +275,11 @@
 .ct-page-card-meta > * { flex: none; width: auto; }
 .ct-page-card .fi-ta-text-item-icon { flex: none; }
 .fi-ta:has(.ct-paginas-toolbar) .fi-ta-content-grid .fi-ta-actions { width: 100%; }
+.fi-ta:has(.ct-paginas-toolbar) .fi-ta-content-grid .fi-ta-actions {
+    flex-wrap: wrap;
+    gap: .5rem;
+}
+.fi-ta:has(.ct-paginas-toolbar) .fi-ta-content-grid .fi-ta-actions > * { min-height: 44px; }
 
 @media (max-width: 767px) {
     .ct-paginas-toolbar { flex-wrap: wrap; }
