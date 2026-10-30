@@ -72,6 +72,88 @@ class PublicacionesSitioTest extends TestCase
             ->assertSee('Sin señal del worker');
     }
 
+    public function test_selected_drafts_are_activated_and_queued_without_changing_published_pages(): void
+    {
+        $this->actingAs(User::factory()->create(['activo' => true]));
+        config(['clicktap.publication_slugs' => null]);
+        $inactive = Pagina::factory()->create(['nombre_publico' => 'Borrador inactivo', 'activo' => false, 'publicacion_estado' => 'sin_publicar']);
+        $active = Pagina::factory()->create(['nombre_publico' => 'Borrador activo', 'activo' => true, 'publicacion_estado' => 'sin_publicar']);
+        $published = Pagina::factory()->create([
+            'nombre_publico' => 'Página publicada', 'activo' => true,
+            'publicacion_estado' => 'publicada', 'publicacion_commit' => 'abc', 'publicada_en' => now(),
+        ]);
+
+        Livewire::test(PublicacionesSitio::class)
+            ->assertSee('Publicar seleccionados en Cloudflare')
+            ->set('selectedPages', [$inactive->id, $active->id])
+            ->call('publishSelectedDrafts')
+            ->assertHasNoErrors()
+            ->assertSet('selectedPages', []);
+
+        $this->assertTrue($inactive->fresh()->activo);
+        $this->assertTrue($active->fresh()->activo);
+        $this->assertSame('publicada', $published->fresh()->publicacion_estado);
+        $this->assertSame('abc', $published->fresh()->publicacion_commit);
+        $this->assertSame(2, app(PublicationQueue::class)->status()['pendingCount']);
+        $this->assertSame('pendiente', app(PublicationQueue::class)->pageStatus($inactive->id)['state']);
+        $this->assertSame('pendiente', app(PublicationQueue::class)->pageStatus($active->id)['state']);
+        $this->assertNull(app(PublicationQueue::class)->pageStatus($published->id));
+    }
+
+    public function test_bulk_publication_rejects_a_published_page_before_activating_drafts(): void
+    {
+        $this->actingAs(User::factory()->create(['activo' => true]));
+        config(['clicktap.publication_slugs' => null]);
+        $draft = Pagina::factory()->create(['activo' => false, 'publicacion_estado' => 'sin_publicar']);
+        $published = Pagina::factory()->create([
+            'publicacion_estado' => 'publicada', 'publicacion_commit' => 'abc', 'publicada_en' => now(),
+        ]);
+
+        Livewire::test(PublicacionesSitio::class)
+            ->set('selectedPages', [$draft->id, $published->id])
+            ->call('publishSelectedDrafts')
+            ->assertStatus(409);
+
+        $this->assertFalse($draft->fresh()->activo);
+        $this->assertSame('publicada', $published->fresh()->publicacion_estado);
+        $this->assertSame(0, app(PublicationQueue::class)->status()['pendingCount']);
+    }
+
+    public function test_bulk_publication_rejects_a_page_with_a_rejected_sale(): void
+    {
+        $actor = User::factory()->create(['activo' => true]);
+        $this->actingAs($actor);
+        config(['clicktap.publication_slugs' => null]);
+        $draft = Pagina::factory()->create(['activo' => false, 'publicacion_estado' => 'sin_publicar']);
+        DB::table('ventas')->insert([
+            'id' => (string) Str::uuid(), 'estado' => 'rechazada', 'pagina_id' => $draft->id,
+            'registrado_por' => $actor->id, 'created_at' => now(), 'updated_at' => now(),
+        ]);
+
+        Livewire::test(PublicacionesSitio::class)
+            ->set('selectedPages', [$draft->id])
+            ->call('publishSelectedDrafts')
+            ->assertStatus(409);
+
+        $this->assertFalse($draft->fresh()->activo);
+        $this->assertSame(0, app(PublicationQueue::class)->status()['pendingCount']);
+    }
+
+    public function test_bulk_publication_respects_the_publication_slug_selection(): void
+    {
+        $this->actingAs(User::factory()->create(['activo' => true]));
+        $draft = Pagina::factory()->create(['slug' => 'fuera-de-seleccion', 'activo' => false, 'publicacion_estado' => 'sin_publicar']);
+        config(['clicktap.publication_slugs' => ['otra-pagina']]);
+
+        Livewire::test(PublicacionesSitio::class)
+            ->set('selectedPages', [$draft->id])
+            ->call('publishSelectedDrafts')
+            ->assertStatus(422);
+
+        $this->assertFalse($draft->fresh()->activo);
+        $this->assertSame(0, app(PublicationQueue::class)->status()['pendingCount']);
+    }
+
     public function test_unpublishing_a_sold_page_keeps_the_sale_confirmed(): void
     {
         $actor = User::factory()->create(['activo' => true]);

@@ -244,6 +244,46 @@ class PublicacionesSitio extends Page
         Notification::make()->warning()->title(count($ids).' borradores movidos a la papelera')->send();
     }
 
+    public function publishSelectedDrafts(): void
+    {
+        abort_unless(auth()->user()?->activo, 403);
+        abort_if($this->filter === 'trash', 409);
+        $ids = $this->selectedIds();
+        $pages = CatalogConnection::remoteReads(fn () => Pagina::query()->whereIn('id', $ids)->get());
+        abort_unless($pages->count() === count($ids), 409, 'La selección cambió. Vuelve a elegir los borradores.');
+        $trash = app(PageTrash::class);
+        $allowed = config('clicktap.publication_slugs');
+        foreach ($pages as $page) {
+            abort_unless($trash->isUnpublishedDraft($page), 409, 'Solo se pueden publicar borradores que nunca se han publicado.');
+            abort_if(is_array($allowed) && ! in_array($page->slug, $allowed, true), 422, 'Hay páginas fuera de la selección de publicación.');
+        }
+        abort_if(app(BusinessLedger::class)->connection()->table('ventas')
+            ->whereIn('pagina_id', $ids)
+            ->whereIn('estado', ['rechazada', 'cancelacion_pendiente'])
+            ->exists(), 409, 'Resuelve primero las ventas rechazadas de la selección.');
+
+        $queue = app(PublicationQueue::class);
+        foreach ($ids as $id) {
+            $page = CatalogConnection::transaction(function () use ($id, $trash): Pagina {
+                $page = Pagina::query()->whereKey($id)->lockForUpdate()->firstOrFail();
+                abort_unless($trash->isUnpublishedDraft($page), 409, 'La página ya no es un borrador sin publicar.');
+                abort_if(app(BusinessLedger::class)->connection()->table('ventas')
+                    ->where('pagina_id', $id)
+                    ->whereIn('estado', ['rechazada', 'cancelacion_pendiente'])
+                    ->exists(), 409, 'Resuelve primero la venta rechazada.');
+                if (! $page->activo) {
+                    $page->forceFill(['activo' => true, 'actualizada_por' => auth()->id()])->save();
+                }
+
+                return $page;
+            });
+            $queue->request($page);
+        }
+        $this->selectedPages = [];
+        Notification::make()->success()->title(count($ids).' publicaciones solicitadas')
+            ->body('Los borradores se activaron y el worker los enviará a Cloudflare. Sigue el progreso desde aquí.')->send();
+    }
+
     public function deleteSelectedDrafts(): void
     {
         $this->guardBulkAction();

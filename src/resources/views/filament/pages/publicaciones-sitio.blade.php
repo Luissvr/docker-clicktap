@@ -35,6 +35,7 @@
                     <button type="button" wire:click="deleteSelectedDrafts" wire:confirm="¿Eliminar definitivamente los borradores seleccionados y sus enlaces?" @disabled(count($selectedPages) === 0) class="min-h-11 rounded-lg border border-[#E9B4B4] px-4 text-sm font-semibold text-[#B70000] disabled:cursor-not-allowed disabled:opacity-50">Eliminar seleccionados</button>
                     <button type="button" wire:click="emptyDraftTrash" wire:confirm="¿Vaciar la papelera de borradores nunca publicados? Se eliminarán definitivamente {{ $draftsInTrash }} borradores. Las páginas que estuvieron publicadas permanecerán protegidas." @disabled($draftsInTrash === 0) class="min-h-11 rounded-lg bg-[#B70000] px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">Vaciar papelera de borradores ({{ $draftsInTrash }})</button>
                 @else
+                    <button type="button" wire:click="publishSelectedDrafts" wire:confirm="¿Activar y solicitar la publicación en Cloudflare de los borradores seleccionados?" wire:loading.attr="disabled" wire:target="publishSelectedDrafts" @disabled(count($selectedPages) === 0) class="min-h-11 rounded-lg bg-[#B6FF00] px-4 text-sm font-semibold text-[#101010] disabled:cursor-not-allowed disabled:opacity-50">Publicar seleccionados en Cloudflare</button>
                     <button type="button" wire:click="moveSelectedDraftsToTrash" wire:confirm="¿Enviar los borradores seleccionados a la papelera durante 30 días?" @disabled(count($selectedPages) === 0) class="min-h-11 rounded-lg border border-[#DCE0D5] px-4 text-sm font-semibold text-[#101010] disabled:cursor-not-allowed disabled:opacity-50">Enviar seleccionados a papelera</button>
                     <button type="button" wire:click="deleteSelectedDraftsDirectly" wire:confirm="¿Eliminar definitivamente los borradores seleccionados y sus enlaces, sin pasar por la papelera? Esta acción no se puede deshacer." @disabled(count($selectedPages) === 0) class="min-h-11 rounded-lg border border-[#E9B4B4] px-4 text-sm font-semibold text-[#B70000] disabled:cursor-not-allowed disabled:opacity-50">Eliminar directamente</button>
                 @endif
@@ -79,17 +80,17 @@
                         <div class="relative flex h-40 items-center justify-center overflow-hidden border-b border-[#DCE0D5]" style="background-color: {{ $coverColor }}">
                             <div class="absolute inset-0 bg-gradient-to-br from-white/50 via-transparent to-[#101010]/10"></div>
                             @if ($trashAvailable && in_array($page->id, $selectableIds, true))
-                                <label class="absolute left-3 top-3 z-10 flex min-h-11 items-center gap-2 rounded-lg bg-white/95 px-3 text-xs font-semibold text-[#101010] shadow-sm">
+                                <label class="absolute left-3 top-3 z-20 flex min-h-11 items-center gap-2 rounded-lg bg-white/95 px-3 text-xs font-semibold text-[#101010] shadow-sm">
                                     <input type="checkbox" wire:model.live="selectedPages" value="{{ $page->id }}" class="rounded border-[#596052] text-[#375500] focus:ring-[#5B8F00]" />
                                     Seleccionar
                                 </label>
                             @endif
                             @if ($coverUrls[$page->id] ?? null)
-                                <img src="{{ $coverUrls[$page->id] }}" alt="Logo de {{ $page->nombre_publico ?: $page->slug }}" loading="lazy" class="relative z-10 max-h-28 max-w-[70%] object-contain drop-shadow-md" />
+                                <img src="{{ $coverUrls[$page->id] }}" alt="Logo de {{ $page->nombre_publico ?: $page->slug }}" loading="lazy" class="pointer-events-none absolute inset-0 z-0 h-full w-full object-contain p-4 drop-shadow-md" />
                             @else
                                 <span class="relative z-10 flex h-20 w-20 items-center justify-center rounded-2xl bg-[#101010] text-3xl font-bold text-[#B6FF00] shadow-lg" aria-hidden="true">{{ mb_strtoupper(mb_substr($page->nombre_publico ?: $page->slug, 0, 1)) }}</span>
                             @endif
-                            <span class="absolute right-3 top-3 z-10 rounded-full px-3 py-1 text-xs font-bold shadow-sm {{ $badgeClass }}">{{ $badgeLabel }}</span>
+                            <span class="absolute right-3 top-3 z-20 rounded-full px-3 py-1 text-xs font-bold shadow-sm {{ $badgeClass }}">{{ $badgeLabel }}</span>
                         </div>
                         <div class="flex flex-1 flex-col p-4 sm:p-5">
                         <div class="flex flex-wrap items-start justify-between gap-2">
