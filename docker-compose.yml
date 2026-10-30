@@ -30,7 +30,7 @@ services:
     <<: *php-service
     container_name: clicktap_publication_worker
     user: www-data
-    command: sh -c "until [ -f vendor/autoload.php ]; do sleep 2; done; php artisan clicktap:publication-worker"
+    command: sh -c "until [ -f vendor/autoload.php ]; do sleep 2; done; while true; do php artisan clicktap:publication-worker --once; sleep 2; done"
     depends_on:
       - app
 
