@@ -83,12 +83,6 @@
                     <li wire:key="publication-page-{{ $page->id }}" class="isolate flex min-w-0 flex-col overflow-hidden rounded-2xl border border-[#DCE0D5] bg-white shadow-sm" x-data="{ withdrawalOpen: false }">
                         <div class="relative flex h-40 items-center justify-center overflow-hidden border-b border-[#DCE0D5]" style="background-color: {{ $coverColor }}">
                             <div class="absolute inset-0 bg-gradient-to-br from-white/50 via-transparent to-[#101010]/10"></div>
-                            @if (in_array($page->id, $selectableIds, true))
-                                <label class="absolute left-3 top-3 z-20 flex min-h-11 items-center gap-2 rounded-lg bg-white/95 px-3 text-xs font-semibold text-[#101010] shadow-sm">
-                                    <input type="checkbox" wire:key="publication-select-{{ $page->id }}" wire:model.live="selectedPages" value="{{ $page->id }}" class="rounded border-[#596052] text-[#375500] focus:ring-[#5B8F00]" />
-                                    Seleccionar
-                                </label>
-                            @endif
                             @if ($coverUrls[$page->id] ?? null)
                                 <img src="{{ $coverUrls[$page->id] }}" alt="Logo de {{ $page->nombre_publico ?: $page->slug }}" loading="lazy" class="pointer-events-none absolute inset-0 z-0 h-full w-full object-contain p-4 drop-shadow-md" />
                             @else
@@ -97,6 +91,12 @@
                             <span class="absolute right-3 top-3 z-20 rounded-full px-3 py-1 text-xs font-bold shadow-sm {{ $badgeClass }}">{{ $badgeLabel }}</span>
                         </div>
                         <div class="flex flex-1 flex-col p-4 sm:p-5">
+                        @if (in_array($page->id, $selectableIds, true))
+                            <label class="mb-3 flex min-h-11 w-fit items-center gap-2 rounded-lg border border-[#DCE0D5] bg-[#F6F7F5] px-3 text-xs font-semibold text-[#101010]">
+                                <input type="checkbox" wire:key="publication-select-{{ $page->id }}" wire:model.live="selectedPages" value="{{ $page->id }}" class="rounded border-[#596052] text-[#375500] focus:ring-[#5B8F00]" />
+                                Seleccionar para publicar
+                            </label>
+                        @endif
                         <div class="flex flex-wrap items-start justify-between gap-2">
                             <div class="min-w-0">
                                 <h3 class="break-words text-base font-semibold text-[#101010]">{{ $page->nombre_publico ?: 'Página sin nombre' }}</h3>
