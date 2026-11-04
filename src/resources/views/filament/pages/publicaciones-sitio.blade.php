@@ -28,16 +28,20 @@
 
         <livewire:publication-worker-monitor />
 
-        @if ($trashAvailable && ($selectableIds !== [] || ($filter === 'trash' && $draftsInTrash > 0)))
+        @if ($selectableIds !== [] || ($filter === 'trash' && $draftsInTrash > 0))
             <div class="flex flex-wrap items-center gap-3 rounded-xl border border-[#DCE0D5] bg-white p-3">
                 <p class="mr-auto text-sm text-[#596052]">Selecciona tarjetas de borradores nunca publicados. {{ count($selectedPages) }} seleccionadas.</p>
                 @if ($filter === 'trash')
-                    <button type="button" wire:click="deleteSelectedDrafts" wire:confirm="¿Eliminar definitivamente los borradores seleccionados y sus enlaces?" @disabled(count($selectedPages) === 0) class="min-h-11 rounded-lg border border-[#E9B4B4] px-4 text-sm font-semibold text-[#B70000] disabled:cursor-not-allowed disabled:opacity-50">Eliminar seleccionados</button>
-                    <button type="button" wire:click="emptyDraftTrash" wire:confirm="¿Vaciar la papelera de borradores nunca publicados? Se eliminarán definitivamente {{ $draftsInTrash }} borradores. Las páginas que estuvieron publicadas permanecerán protegidas." @disabled($draftsInTrash === 0) class="min-h-11 rounded-lg bg-[#B70000] px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">Vaciar papelera de borradores ({{ $draftsInTrash }})</button>
+                    @if ($trashAvailable)
+                        <button type="button" wire:click="deleteSelectedDrafts" wire:confirm="¿Eliminar definitivamente los borradores seleccionados y sus enlaces?" @disabled(count($selectedPages) === 0) class="min-h-11 rounded-lg border border-[#E9B4B4] px-4 text-sm font-semibold text-[#B70000] disabled:cursor-not-allowed disabled:opacity-50">Eliminar seleccionados</button>
+                        <button type="button" wire:click="emptyDraftTrash" wire:confirm="¿Vaciar la papelera de borradores nunca publicados? Se eliminarán definitivamente {{ $draftsInTrash }} borradores. Las páginas que estuvieron publicadas permanecerán protegidas." @disabled($draftsInTrash === 0) class="min-h-11 rounded-lg bg-[#B70000] px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">Vaciar papelera de borradores ({{ $draftsInTrash }})</button>
+                    @endif
                 @else
                     <button type="button" wire:click="publishSelectedDrafts" wire:confirm="¿Activar y solicitar la publicación en Cloudflare de los borradores seleccionados?" wire:loading.attr="disabled" wire:target="publishSelectedDrafts" @disabled(count($selectedPages) === 0) class="min-h-11 rounded-lg bg-[#B6FF00] px-4 text-sm font-semibold text-[#101010] disabled:cursor-not-allowed disabled:opacity-50">Publicar seleccionados en Cloudflare</button>
-                    <button type="button" wire:click="moveSelectedDraftsToTrash" wire:confirm="¿Enviar los borradores seleccionados a la papelera durante 30 días?" @disabled(count($selectedPages) === 0) class="min-h-11 rounded-lg border border-[#DCE0D5] px-4 text-sm font-semibold text-[#101010] disabled:cursor-not-allowed disabled:opacity-50">Enviar seleccionados a papelera</button>
-                    <button type="button" wire:click="deleteSelectedDraftsDirectly" wire:confirm="¿Eliminar definitivamente los borradores seleccionados y sus enlaces, sin pasar por la papelera? Esta acción no se puede deshacer." @disabled(count($selectedPages) === 0) class="min-h-11 rounded-lg border border-[#E9B4B4] px-4 text-sm font-semibold text-[#B70000] disabled:cursor-not-allowed disabled:opacity-50">Eliminar directamente</button>
+                    @if ($trashAvailable)
+                        <button type="button" wire:click="moveSelectedDraftsToTrash" wire:confirm="¿Enviar los borradores seleccionados a la papelera durante 30 días?" @disabled(count($selectedPages) === 0) class="min-h-11 rounded-lg border border-[#DCE0D5] px-4 text-sm font-semibold text-[#101010] disabled:cursor-not-allowed disabled:opacity-50">Enviar seleccionados a papelera</button>
+                        <button type="button" wire:click="deleteSelectedDraftsDirectly" wire:confirm="¿Eliminar definitivamente los borradores seleccionados y sus enlaces, sin pasar por la papelera? Esta acción no se puede deshacer." @disabled(count($selectedPages) === 0) class="min-h-11 rounded-lg border border-[#E9B4B4] px-4 text-sm font-semibold text-[#B70000] disabled:cursor-not-allowed disabled:opacity-50">Eliminar directamente</button>
+                    @endif
                 @endif
             </div>
         @endif
@@ -79,9 +83,9 @@
                     <li wire:key="publication-page-{{ $page->id }}" class="isolate flex min-w-0 flex-col overflow-hidden rounded-2xl border border-[#DCE0D5] bg-white shadow-sm" x-data="{ withdrawalOpen: false }">
                         <div class="relative flex h-40 items-center justify-center overflow-hidden border-b border-[#DCE0D5]" style="background-color: {{ $coverColor }}">
                             <div class="absolute inset-0 bg-gradient-to-br from-white/50 via-transparent to-[#101010]/10"></div>
-                            @if ($trashAvailable && in_array($page->id, $selectableIds, true))
+                            @if (in_array($page->id, $selectableIds, true))
                                 <label class="absolute left-3 top-3 z-20 flex min-h-11 items-center gap-2 rounded-lg bg-white/95 px-3 text-xs font-semibold text-[#101010] shadow-sm">
-                                    <input type="checkbox" wire:model.live="selectedPages" value="{{ $page->id }}" class="rounded border-[#596052] text-[#375500] focus:ring-[#5B8F00]" />
+                                    <input type="checkbox" wire:key="publication-select-{{ $page->id }}" wire:model.live="selectedPages" value="{{ $page->id }}" class="rounded border-[#596052] text-[#375500] focus:ring-[#5B8F00]" />
                                     Seleccionar
                                 </label>
                             @endif
