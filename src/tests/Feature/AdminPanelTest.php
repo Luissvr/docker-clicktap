@@ -43,8 +43,8 @@ class AdminPanelTest extends TestCase
 
         $this->assertDatabaseCount('clientes', 0);
         $this->assertDatabaseHas('locales', ['nombre_interno' => 'Local Demo', 'cliente_id' => null]);
-        $this->assertDatabaseHas('paginas', ['slug' => 'local-demo', 'activo' => true, 'estado_comercial' => 'por_vender']);
-        $this->assertSame(1, app(PublicationQueue::class)->status()['pendingCount']);
+        $this->assertDatabaseHas('paginas', ['slug' => 'local-demo', 'activo' => false, 'estado_comercial' => 'por_vender', 'publicacion_estado' => 'sin_publicar']);
+        $this->assertSame(0, app(PublicationQueue::class)->status()['pendingCount']);
     }
 
     public function test_page_form_rejects_more_than_150_description_words(): void
