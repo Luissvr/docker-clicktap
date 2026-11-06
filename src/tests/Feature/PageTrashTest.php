@@ -148,7 +148,7 @@ class PageTrashTest extends TestCase
 
         Livewire::test(PublicacionesSitio::class)
             ->set('selectedPages', [$first->id, $second->id])
-            ->call('moveSelectedDraftsToTrash')
+            ->call('moveSelectedToTrash')
             ->assertHasNoErrors();
         $this->assertNotNull($first->fresh()->papelera_en);
         $this->assertNotNull($second->fresh()->papelera_en);
@@ -162,7 +162,7 @@ class PageTrashTest extends TestCase
         $this->assertDatabaseMissing('paginas', ['id' => $second->id]);
     }
 
-    public function test_bulk_selection_rejects_published_pages_before_deleting_any_draft(): void
+    public function test_bulk_direct_delete_purges_drafts_and_trashes_published_pages(): void
     {
         $this->actingAs(User::factory()->create(['activo' => true]));
         $draft = Pagina::factory()->create(['publicacion_estado' => 'sin_publicar']);
@@ -173,10 +173,28 @@ class PageTrashTest extends TestCase
         Livewire::test(PublicacionesSitio::class)
             ->set('selectedPages', [$draft->id, $published->id])
             ->call('deleteSelectedDraftsDirectly')
-            ->assertStatus(409);
+            ->assertHasNoErrors();
 
-        $this->assertDatabaseHas('paginas', ['id' => $draft->id]);
-        $this->assertDatabaseHas('paginas', ['id' => $published->id]);
+        $this->assertDatabaseMissing('paginas', ['id' => $draft->id]);
+        $this->assertNotNull($published->fresh()->papelera_en);
+        $this->assertSame('retirada_pendiente', $published->fresh()->publicacion_estado);
+    }
+
+    public function test_bulk_trash_accepts_published_pages_and_drafts(): void
+    {
+        $this->actingAs(User::factory()->create(['activo' => true]));
+        $draft = Pagina::factory()->create(['publicacion_estado' => 'sin_publicar']);
+        $published = Pagina::factory()->create([
+            'publicacion_estado' => 'publicada', 'publicacion_commit' => 'abc', 'publicada_en' => now(),
+        ]);
+
+        Livewire::test(PublicacionesSitio::class)
+            ->set('selectedPages', [$draft->id, $published->id])
+            ->call('moveSelectedToTrash')
+            ->assertHasNoErrors();
+
+        $this->assertNotNull($draft->fresh()->papelera_en);
+        $this->assertNotNull($published->fresh()->papelera_en);
     }
 
     public function test_empty_trash_only_removes_never_published_drafts(): void

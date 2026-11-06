@@ -503,20 +503,19 @@ class PublicacionesSitio extends Page
         Notification::make()->warning()->title('Página movida a la papelera')->body('Se conserva 30 días. Si estuvo publicada, espera a que se confirme la retirada del sitio.')->send();
     }
 
-    public function moveSelectedDraftsToTrash(): void
+    public function moveSelectedToTrash(): void
     {
         $this->guardBulkAction();
         abort_if($this->filter === 'trash', 409);
         $ids = $this->selectedIds();
-        $eligible = $this->neverPublishedQuery()->whereNull('papelera_en')->whereIn('id', $ids)->count();
-        abort_unless($eligible === count($ids), 409, 'La selección incluye páginas que no son borradores sin publicar.');
 
         $trash = app(PageTrash::class);
         foreach ($ids as $id) {
-            $trash->moveDraft($id);
+            $trash->move($id);
         }
         $this->selectedPages = [];
-        Notification::make()->warning()->title(count($ids).' borradores movidos a la papelera')->send();
+        Notification::make()->warning()->title(count($ids).' páginas movidas a la papelera')
+            ->body('Las que estuvieron publicadas esperan la confirmación de retirada de Cloudflare.')->send();
     }
 
     public function publishSelectedDrafts(): void
@@ -578,16 +577,22 @@ class PublicacionesSitio extends Page
         $this->guardBulkAction();
         abort_if($this->filter === 'trash', 409);
         $ids = $this->selectedIds();
-        $eligible = $this->neverPublishedQuery()->whereNull('papelera_en')->whereIn('id', $ids)->count();
-        abort_unless($eligible === count($ids), 409, 'La selección incluye páginas que no son borradores sin publicar.');
 
         $trash = app(PageTrash::class);
+        $deleted = 0;
         foreach ($ids as $id) {
-            $trash->moveDraft($id);
-            $trash->purgeDraft($id);
+            $page = Pagina::query()->findOrFail($id);
+            if ($trash->isUnpublishedDraft($page)) {
+                $trash->moveDraft($id);
+                $trash->purgeDraft($id);
+                $deleted++;
+            } else {
+                $trash->move($id);
+            }
         }
         $this->selectedPages = [];
-        Notification::make()->success()->title(count($ids).' borradores eliminados definitivamente')->send();
+        Notification::make()->success()->title($deleted.' borradores eliminados definitivamente')
+            ->body((count($ids) - $deleted).' publicadas pasaron a la papelera; se eliminarán cuando se confirme su retirada de Cloudflare.')->send();
     }
 
     public function emptyDraftTrash(): void

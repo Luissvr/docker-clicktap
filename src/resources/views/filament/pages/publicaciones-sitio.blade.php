@@ -11,6 +11,7 @@
         boxFor(id) { return this.boxes().find((box) => box.value === id); },
         nameOf(id) { return this.boxFor(id)?.dataset.name ?? id; },
         get canActOnDrafts() { return this.selected.length > 0 && this.selected.every((id) => this.boxFor(id)?.dataset.draft === '1'); },
+        get canAct() { return this.selected.length > 0; },
         get canRejectSelected() { return this.selected.length > 0 && this.selected.length <= this.bulkRejectLimit && this.selected.every((id) => this.boxFor(id)?.dataset.rejectable === '1'); },
         selectVisible() { this.$wire.selectedPages = this.boxes().map((box) => box.value); },
         clearSelection() { this.$wire.selectedPages = []; this.rejectOpen = false; },
@@ -177,15 +178,15 @@
                             <button type="button" wire:click="emptyDraftTrash" wire:confirm="¿Vaciar la papelera de borradores nunca publicados? Se eliminarán definitivamente {{ $draftsInTrash }} borradores. Las páginas que estuvieron publicadas permanecerán protegidas." @disabled($draftsInTrash === 0) class="ct-sel-btn ct-sel-btn-solid-danger">Vaciar papelera ({{ $draftsInTrash }})</button>
                         @else
                             <button type="button" x-on:click="rejectOpen = ! rejectOpen" x-bind:aria-expanded="rejectOpen" disabled x-bind:disabled="! canRejectSelected" class="ct-sel-btn">Rechazar</button>
-                            <button type="button" wire:click="publishSelectedDrafts" wire:confirm="¿Activar y solicitar la publicación en Cloudflare de los borradores seleccionados?" wire:loading.attr="disabled" wire:target="publishSelectedDrafts" disabled x-bind:disabled="! canActOnDrafts" class="ct-sel-btn ct-sel-btn-primary">Publicar seleccionados</button>
+                            <button type="button" wire:click="publishSelectedDrafts" wire:confirm="¿Activar y solicitar la publicación en Cloudflare de las páginas seleccionadas por vender?" wire:loading.attr="disabled" wire:target="publishSelectedDrafts" disabled x-bind:disabled="! canActOnDrafts" class="ct-sel-btn ct-sel-btn-primary">Por vender</button>
                             @if ($trashAvailable)
-                                <button type="button" wire:click="moveSelectedDraftsToTrash" wire:confirm="¿Enviar los borradores seleccionados a la papelera durante 30 días?" disabled x-bind:disabled="! canActOnDrafts" class="ct-sel-btn">A papelera</button>
-                                <button type="button" wire:click="deleteSelectedDraftsDirectly" wire:confirm="¿Eliminar definitivamente los borradores seleccionados y sus enlaces, sin pasar por la papelera? Esta acción no se puede deshacer." disabled x-bind:disabled="! canActOnDrafts" class="ct-sel-btn ct-sel-btn-danger">Eliminar directo</button>
+                                <button type="button" wire:click="moveSelectedToTrash" wire:confirm="¿Enviar las páginas seleccionadas a la papelera durante 30 días? Las publicadas se retirarán de Cloudflare." disabled x-bind:disabled="! canAct" class="ct-sel-btn">A papelera</button>
+                                <button type="button" wire:click="deleteSelectedDraftsDirectly" wire:confirm="¿Eliminar directamente las páginas seleccionadas? Los borradores se borran ya; las publicadas pasan a la papelera hasta confirmar su retirada de Cloudflare." disabled x-bind:disabled="! canAct" class="ct-sel-btn ct-sel-btn-danger">Eliminar directo</button>
                             @endif
                         @endif
                     </div>
                 </div>
-                <p class="ct-sel-hint">Rechazar aplica a páginas "Por vender"; papelera y eliminar, solo a borradores nunca publicados. Truco: marca una página, mantén Mayús y marca otra para seleccionar las de en medio.</p>
+                <p class="ct-sel-hint">Rechazar aplica a páginas "Por vender". Por vender publica borradores en Cloudflare. Papelera y eliminar aplican a cualquier selección; las publicadas se retiran de Cloudflare antes de eliminarse. Truco: marca una página, mantén Mayús y marca otra para seleccionar las de en medio.</p>
                 @if ($filter !== 'trash')
                     <p x-cloak x-show="selected.length > bulkRejectLimit" style="display:none" class="ct-sel-warning" role="status">Para rechazar, selecciona hasta <span x-text="bulkRejectLimit"></span> páginas por vez.</p>
                     <div x-cloak x-show="rejectOpen && canRejectSelected" style="display:none" class="ct-sel-reject">

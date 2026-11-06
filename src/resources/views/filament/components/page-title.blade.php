@@ -8,6 +8,9 @@
     if ($isResourceDetail) {
         $resource = $this::getResource();
         $backLabel = 'Volver a ' . ucfirst($resource::getPluralModelLabel());
+        $backUrl = $resource === \App\Filament\Resources\PaginaResource::class
+            ? \App\Filament\Pages\PublicacionesSitio::getUrl()
+            : $resource::getUrl('index');
         $headerHeading = match (true) {
             $this instanceof \Filament\Resources\Pages\EditRecord => 'Editar ' . $resource::getModelLabel(),
             $this instanceof \Filament\Resources\Pages\CreateRecord => 'Crear ' . $resource::getModelLabel(),
@@ -32,7 +35,7 @@
 @if ($isResourceDetail)
     <div class="ct-content-heading">
         @if ($resource::hasPage('index'))
-            <a href="{{ $resource::getUrl('index') }}" class="ct-page-back" wire:navigate>
+            <a href="{{ $backUrl }}" class="ct-page-back" wire:navigate>
                 <x-filament::icon icon="heroicon-o-arrow-left" class="ct-page-back-icon" />
                 <span>{{ $backLabel }}</span>
             </a>
