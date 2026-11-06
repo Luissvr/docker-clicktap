@@ -7,6 +7,10 @@
     "build:admin": "npm --prefix src run build:admin",
     "dev": "npm --prefix src run dev",
     "dev:admin": "npm --prefix src run dev:admin",
-    "test:ui": "npm --prefix src run test:ui"
+    "test:ui": "npm --prefix src run test:ui",
+    "prequality:pages": "npm run build:admin",
+    "quality:pages": "docker compose exec -T app php artisan test --compact tests/Feature/PublicacionesSitioTest.php tests/Feature/PublicationQueueTest.php tests/Feature/SaleRejectionTest.php tests/Feature/PageTrashTest.php tests/Feature/AdminPanelTest.php tests/Feature/BusinessLedgerTest.php",
+    "quality:pages:postgres": "docker compose exec -T -e CLICKTAP_SYNC_TEST_DATABASE=clicktap_test app php artisan test --compact tests/Feature/LocalCatalogSyncTest.php",
+    "postquality:pages": "git diff --check"
   }
 }
