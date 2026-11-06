@@ -182,6 +182,11 @@ final class PublicPagePublisher
     private function mergePageIntoContract(array $payload, Pagina $pagina): array
     {
         $page = $this->exporter->page($pagina);
+        foreach (['logo', 'favicon'] as $imageField) {
+            if (is_string($page[$imageField] ?? null) && str_starts_with(strtolower($page[$imageField]), 'http://')) {
+                throw new RuntimeException("La imagen {$imageField} de {$pagina->slug} usa HTTP. Reemplázala por una URL HTTPS antes de publicar.");
+            }
+        }
         if (is_string($page['logo'] ?? null) && str_starts_with($page['logo'], '/storage/')) {
             $extension = strtolower(pathinfo($pagina->logo_path, PATHINFO_EXTENSION)) ?: 'bin';
             $publicLogo = '/generated/logos/'.$pagina->slug.'.'.$extension;

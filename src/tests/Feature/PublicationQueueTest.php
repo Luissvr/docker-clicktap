@@ -21,6 +21,22 @@ class PublicationQueueTest extends TestCase
         config(['clicktap.publication_slugs' => null]);
     }
 
+    public function test_page_statuses_resolve_all_visible_pages_with_the_same_priority_as_single_page_lookup(): void
+    {
+        $this->actingAs(User::factory()->create(['activo' => true]));
+        $first = Pagina::factory()->create();
+        $second = Pagina::factory()->create();
+        $queue = app(PublicationQueue::class);
+        $queue->request($first);
+        $queue->request($second);
+
+        $statuses = $queue->pageStatuses([$first->id, $second->id]);
+
+        $this->assertSame($queue->pageStatus($first->id), $statuses[$first->id]);
+        $this->assertSame($queue->pageStatus($second->id), $statuses[$second->id]);
+        $this->assertSame([], $queue->pageStatuses([]));
+    }
+
     public function test_each_page_is_published_once_in_order_without_network_requests_in_the_web_action(): void
     {
         $this->actingAs(User::factory()->create());

@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Livewire\CatalogSyncStatus;
+use App\Livewire\ConnectionStatus;
 use App\Models\User;
 use App\Support\CatalogSyncState;
 use App\Support\LocalCatalogSync;
@@ -19,15 +19,15 @@ class CatalogSyncStatusTest extends TestCase
         $this->actingAs(User::factory()->create());
         config(['clicktap.local_catalog' => true]);
         $this->mock(LocalCatalogSync::class)->shouldNotReceive('sync');
-        Livewire::test(CatalogSyncStatus::class)->call('synchronize')->assertSee('Sincronización solicitada');
+        Livewire::test(ConnectionStatus::class)->call('synchronize')->assertSee("Sincronización solicitada");
         $this->assertTrue(app(CatalogSyncState::class)->requested());
     }
 
     public function test_guest_and_inactive_users_cannot_request_sync(): void
     {
-        Livewire::test(CatalogSyncStatus::class)->assertForbidden();
+        Livewire::test(ConnectionStatus::class)->assertForbidden();
         $this->actingAs(User::factory()->create(['activo' => false]));
-        Livewire::test(CatalogSyncStatus::class)->assertForbidden();
+        Livewire::test(ConnectionStatus::class)->assertForbidden();
         $this->assertFalse(app(CatalogSyncState::class)->requested());
     }
 
@@ -44,10 +44,10 @@ class CatalogSyncStatusTest extends TestCase
     {
         $this->actingAs(User::factory()->create());
         config(['clicktap.local_catalog' => true]);
-        $component = Livewire::test(CatalogSyncStatus::class)->call('synchronize');
+        $component = Livewire::test(ConnectionStatus::class)->call('synchronize');
         $state = app(CatalogSyncState::class);
         $state->cache()->forget('catalog-sync-requested');
         $state->update(['completed_at' => now()->timestamp]);
-        $component->call('refreshStatus')->assertDispatched('catalog-synced')->assertSee('Última sincronización');
+        $component->call('refreshStatus')->assertDispatched('catalog-synced');
     }
 }

@@ -105,6 +105,7 @@ class CloudflareDeploymentTracker
                             'message' => $outcome['message'],
                         ];
                         $cache->forever('publication-result:'.$task['page_id'], $completed);
+                        app(PublicationHistory::class)->record($completed);
                         $latest = $cache->get('publication-result');
                         if (($latest['page_id'] ?? null) === $task['page_id'] && ($latest['commit'] ?? null) === $task['commit']) {
                             $cache->forever('publication-result', array_merge($latest, $outcome, ['completed_at' => $completed['completed_at'], 'events' => $completed['events']]));
@@ -121,6 +122,7 @@ class CloudflareDeploymentTracker
                             ];
                             $timedOut['events'][] = ['stage' => 'comprobacion_pendiente', 'at' => $timedOut['completed_at'], 'message' => $timedOut['message']];
                             $cache->forever('publication-result:'.$task['page_id'], $timedOut);
+                            app(PublicationHistory::class)->record($timedOut);
                             $latest = $cache->get('publication-result');
                             if (($latest['page_id'] ?? null) === $task['page_id'] && ($latest['commit'] ?? null) === $task['commit']) {
                                 $cache->forever('publication-result', array_merge($latest, [
@@ -170,7 +172,7 @@ class CloudflareDeploymentTracker
             $page->forceFill(['publicacion_estado' => $task['type'] === 'withdraw' ? 'retirada_fallida' : 'fallida'])->save();
             CatalogConnection::refreshAfterWrite($page);
 
-            return ['state' => 'fallida', 'message' => 'Cloudflare no pudo completar el despliegue. Revisa el proyecto antes de reintentar.'];
+            return ['state' => 'fallida', 'message' => 'Cloudflare no pudo completar el despliegue. Revisa el proyecto antes de reintentar.', 'deployment_id' => $deployment['id'] ?? null, 'deployment_status' => $stage];
         }
         if ($stage !== 'success') {
             return null;
@@ -178,6 +180,9 @@ class CloudflareDeploymentTracker
 
         $withdraw = $task['type'] === 'withdraw';
         $baseUrl = rtrim((string) config('services.cloudflare.public_url', 'https://clicktap.app'), '/');
+        if (! str_starts_with(strtolower($baseUrl), 'https://')) {
+            return ['state' => 'comprobacion_pendiente', 'message' => 'El dominio público debe usar HTTPS. Corrige CLOUDFLARE_PUBLIC_URL.', 'deployment_id' => $deployment['id'] ?? null];
+        }
         $routes = [$page->slug];
         if ($withdraw) {
             $routes = array_merge($routes, $page->getConnection()->table('alias_pagina')
@@ -199,6 +204,10 @@ class CloudflareDeploymentTracker
         return [
             'state' => $withdraw ? 'retirada' : 'publicada',
             'message' => $withdraw ? 'El dominio público ya no entrega esta página.' : 'El despliegue coincide con el commit y la página responde desde el dominio público.',
+            'deployment_id' => $deployment['id'] ?? null,
+            'deployment_status' => $stage,
+            'public_url' => $baseUrl.'/'.rawurlencode($page->slug),
+            'http_status' => $public->status(),
         ];
     }
 }

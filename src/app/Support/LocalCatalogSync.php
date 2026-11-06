@@ -10,7 +10,7 @@ use Throwable;
 
 class LocalCatalogSync
 {
-    public const TABLES = ['clientes', 'locales', 'paginas', 'enlaces_pagina'];
+    public const TABLES = ['clientes', 'locales', 'paginas', 'enlaces_pagina', 'albumes_paginas', 'album_pagina'];
 
     protected array $snapshot = [];
 
@@ -20,15 +20,19 @@ class LocalCatalogSync
         $source ??= DB::connection('supabase');
         $this->assertConnections($local, $source);
         $table = $record->getTable();
-        if (! in_array($table, ['clientes', 'locales', 'paginas'], true)) {
+        if (! in_array($table, ['clientes', 'locales', 'paginas', 'albumes_paginas'], true)) {
             throw new RuntimeException('Se requiere una sincronización completa para este registro.');
         }
         $qualified = fn (string $name): string => $source->getQueryGrammar()->wrapTable($source->getConfig('search_path').'.'.$name);
         $conditions = [$table => 'id = ?'];
         if ($table === 'paginas') {
             $conditions['enlaces_pagina'] = 'pagina_id = ?';
+            $conditions['album_pagina'] = 'pagina_id = ?';
+            $conditions['albumes_paginas'] = 'id IN (SELECT album_id FROM '.$qualified('album_pagina').' WHERE pagina_id = ?)';
             $conditions['locales'] = 'id = (SELECT local_id FROM '.$qualified('paginas').' WHERE id = ?)';
             $conditions['clientes'] = 'id = (SELECT cliente_id FROM '.$qualified('locales').' WHERE id = (SELECT local_id FROM '.$qualified('paginas').' WHERE id = ?))';
+        } elseif ($table === 'albumes_paginas') {
+            $conditions['album_pagina'] = 'album_id = ?';
         } elseif ($table === 'locales') {
             $conditions['clientes'] = 'id = (SELECT cliente_id FROM '.$qualified('locales').' WHERE id = ?)';
         }
@@ -46,6 +50,9 @@ class LocalCatalogSync
                 }
                 if ($table === 'paginas') {
                     $local->table('enlaces_pagina')->where('pagina_id', $record->getKey())->delete();
+                    $local->table('album_pagina')->where('pagina_id', $record->getKey())->delete();
+                } elseif ($table === 'albumes_paginas') {
+                    $local->table('album_pagina')->where('album_id', $record->getKey())->delete();
                 }
                 foreach (self::TABLES as $name) {
                     foreach ($snapshot[$name] ?? [] as $row) {
@@ -55,7 +62,7 @@ class LocalCatalogSync
                             }
                         }
                         unset($value);
-                        $local->table($name)->upsert([$row], ['id']);
+                        $local->table($name)->upsert([$row], $name === 'album_pagina' ? ['album_id', 'pagina_id'] : ['id']);
                     }
                 }
                 if (($snapshot[$table] ?? []) === []) {
@@ -181,7 +188,7 @@ class LocalCatalogSync
             unset($row);
             $local->table($staging)->insert($rows);
         }
-        foreach (['cliente_id', 'local_id', 'pagina_id', 'slug'] as $indexed) {
+        foreach (['cliente_id', 'local_id', 'pagina_id', 'album_id', 'slug', 'venta_id', 'estado_comercial', 'updated_at', 'created_at', 'nombre_publico'] as $indexed) {
             if (in_array($indexed, array_column($columns, 'name'), true)) {
                 $local->statement('CREATE INDEX ON '.$qualified.' ('.$grammar->wrap($indexed).')');
             }

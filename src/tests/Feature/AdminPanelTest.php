@@ -8,6 +8,7 @@ use App\Models\Pagina;
 use App\Models\User;
 use App\Support\LogoPalette;
 use App\Support\PagePreviewCompiler;
+use App\Support\PublicationQueue;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
@@ -35,14 +36,15 @@ class AdminPanelTest extends TestCase
             ->fillForm([
                 'nombre_publico' => 'Local Demo',
                 'slug' => 'local-demo',
-                'activo' => false,
+                'activo' => true,
             ])
             ->call('create')
             ->assertHasNoFormErrors();
 
         $this->assertDatabaseCount('clientes', 0);
         $this->assertDatabaseHas('locales', ['nombre_interno' => 'Local Demo', 'cliente_id' => null]);
-        $this->assertDatabaseHas('paginas', ['slug' => 'local-demo', 'activo' => false]);
+        $this->assertDatabaseHas('paginas', ['slug' => 'local-demo', 'activo' => true, 'estado_comercial' => 'por_vender']);
+        $this->assertSame(1, app(PublicationQueue::class)->status()['pendingCount']);
     }
 
     public function test_page_form_rejects_more_than_150_description_words(): void
@@ -201,11 +203,11 @@ class AdminPanelTest extends TestCase
         $this->actingAs(User::factory()->create());
         $component = Livewire::test(CreatePagina::class)
             ->fillForm(['nombre_publico' => 'Reseñas', 'slug' => 'resenas'])
-            ->callFormComponentAction('enlaces', 'add');
+            ->fillForm(['enlaces' => []])
+            ->call('addLinkOfType', 'review');
         $key = array_key_first($component->get('data.enlaces'));
 
-        $component->set("data.enlaces.{$key}.tipo", 'review')
-            ->set("data.enlaces.{$key}.place_id", 'ChIJ_Resena_123')
+        $component->set('data.contenido_extra.place_id', 'ChIJ_Resena_123')
             ->assertSee('Place ID de Google')
             ->assertDontSee('Destino (URL)')
             ->assertDontSee('Copiar texto al pulsar')
@@ -239,6 +241,7 @@ class AdminPanelTest extends TestCase
         $this->assertSame('https://search.google.com/local/writereview?placeid=ChIJ_Nuevo', $link->fresh()->url);
         $this->assertArrayNotHasKey('place_id', $page->fresh()->contenido_extra);
         $this->assertSame('Una frase', $page->fresh()->contenido_extra['tagline']);
+        $this->assertSame(1, app(PublicationQueue::class)->status()['pendingCount']);
     }
 
     public function test_empty_transfer_can_be_saved_active_and_renders_as_a_button(): void
@@ -291,6 +294,7 @@ class AdminPanelTest extends TestCase
 
         foreach (['default', 'comercio', 'default'] as $theme) {
             $component->set('data.tema', $theme);
+            $component->call('loadPagePreview');
             $html = $component->get('compiledPagePreviewHtml');
             $this->assertStringContainsString('<body class="theme-'.$theme.'">', $html);
             $this->assertStringContainsString('<p class="tagline">Frase bajo el nombre</p>', $html);
@@ -299,6 +303,7 @@ class AdminPanelTest extends TestCase
         }
 
         $component->set('data.contenido_extra.tagline', 'Frase actualizada');
+        $component->call('loadPagePreview');
         $this->assertStringContainsString('<p class="tagline">Frase actualizada</p>', $component->get('compiledPagePreviewHtml'));
         $this->assertDatabaseCount('paginas', 0);
     }
@@ -325,11 +330,16 @@ class AdminPanelTest extends TestCase
     {
         $this->actingAs(User::factory()->create());
 
-        Livewire::test(CreatePagina::class)
-            ->assertSet('data.enlaces', [])
-            ->callFormComponentAction('enlaces', 'add')
-            ->assertCount('data.enlaces', 1)
-            ->assertSee('Nuevo enlace');
+        $component = Livewire::test(CreatePagina::class)
+            ->assertCount('data.enlaces', 2)
+            ->call('addLinkOfType', 'whatsapp')
+            ->assertCount('data.enlaces', 3)
+            ->assertSee('WhatsApp');
+
+        $newKey = $component->get('expandedLinkKey');
+        $repeater = $component->instance()->form->getComponent('data.enlaces');
+
+        $this->assertFalse($repeater->isCollapsed($repeater->getChildComponentContainers()[$newKey]));
     }
 
     public function test_order_mode_selects_one_link_at_a_time_and_restores_collapse_arrows(): void
@@ -341,9 +351,10 @@ class AdminPanelTest extends TestCase
                 'nombre_publico' => 'Orden manual',
                 'slug' => 'orden-manual',
             ])
-            ->callFormComponentAction('enlaces', 'add')
-            ->callFormComponentAction('enlaces', 'add')
-            ->callFormComponentAction('enlaces', 'add')
+            ->fillForm(['enlaces' => []])
+            ->call('addLinkOfType', 'web')
+            ->call('addLinkOfType', 'web')
+            ->call('addLinkOfType', 'web')
             ->assertFormComponentActionHidden('enlaces', 'seleccionarEnlaceOrden');
 
         $keys = array_keys($component->get('data.enlaces'));
@@ -574,7 +585,7 @@ class AdminPanelTest extends TestCase
     {
         $this->actingAs(User::factory()->create());
         Livewire::test(CreatePagina::class)
-            ->assertSee('Abrir vista final')
+            ->assertSee('Abrir vista')
             ->fillForm([
                 'nombre_publico' => 'Borrador sin guardar', 'slug' => '',
                 'tema' => 'default', 'contenido_extra' => ['tagline' => 'Frase del borrador'],
@@ -596,7 +607,7 @@ class AdminPanelTest extends TestCase
         $page = Pagina::factory()->create(['nombre_publico' => 'Nombre guardado', 'tema' => 'comercio']);
 
         Livewire::test(EditPagina::class, ['record' => $page->getRouteKey()])
-            ->assertSee('Abrir vista final')
+            ->assertSee('Abrir vista')
             ->fillForm(['nombre_publico' => 'Cambio sin guardar', 'tema' => 'default'])
             ->call('renderFinalPagePreview')
             ->assertHasNoErrors()

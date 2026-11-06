@@ -47,6 +47,11 @@ return [
         'pages_project' => env('CLOUDFLARE_PAGES_PROJECT'),
         'token' => env('CLOUDFLARE_API_TOKEN'),
         'public_url' => env('CLOUDFLARE_PUBLIC_URL', 'https://clicktap.app'),
+        'dashboard_url' => env('CLOUDFLARE_DASHBOARD_URL'),
+    ],
+
+    'supabase' => [
+        'dashboard_url' => env('SUPABASE_DASHBOARD_URL'),
     ],
 
 ];

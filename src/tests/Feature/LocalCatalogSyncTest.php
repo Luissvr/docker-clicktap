@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\AlbumPagina;
 use App\Support\LocalCatalogSync;
 use Illuminate\Database\Connection;
 use Illuminate\Support\Facades\DB;
@@ -75,6 +76,36 @@ class LocalCatalogSyncTest extends TestCase
         $this->assertSame(0, $counts['enlaces_pagina']);
         $this->assertSame(0, DB::connection('local')->table('enlaces_pagina')->count());
         $this->assertSame('Cambio', DB::connection('supabase')->table('clientes')->value('nombre'));
+    }
+
+    public function test_album_partial_sync_reconciles_assignment_and_deletion_without_deleting_pages(): void
+    {
+        $remote = DB::connection('supabase');
+        $remote->statement('DROP TABLE album_pagina');
+        $remote->statement('DROP TABLE albumes_paginas');
+        $remote->statement('CREATE TABLE albumes_paginas (id uuid PRIMARY KEY, nombre text, sector text, fecha_ruta date, created_at timestamp without time zone, updated_at timestamp without time zone)');
+        $remote->statement('CREATE TABLE album_pagina (album_id uuid, pagina_id uuid, PRIMARY KEY (album_id, pagina_id))');
+        $albumId = '00000000-0000-0000-0000-000000000002';
+        $pageId = '00000000-0000-0000-0000-000000000001';
+        $remote->table('albumes_paginas')->insert(['id' => $albumId, 'nombre' => 'Ruta centro']);
+        $remote->table('album_pagina')->insert(['album_id' => $albumId, 'pagina_id' => $pageId]);
+
+        $sync = new LocalCatalogSync;
+        $sync->sync();
+        $this->assertSame(1, DB::connection('local')->table('album_pagina')->count());
+
+        $remote->table('albumes_paginas')->where('id', $albumId)->update(['nombre' => 'Ruta renovada']);
+        $remote->table('album_pagina')->where('album_id', $albumId)->delete();
+        $album = new AlbumPagina;
+        $album->id = $albumId;
+        $sync->syncRecord($album, $remote);
+        $this->assertSame('Ruta renovada', DB::connection('local')->table('albumes_paginas')->value('nombre'));
+        $this->assertSame(0, DB::connection('local')->table('album_pagina')->count());
+
+        $remote->table('albumes_paginas')->where('id', $albumId)->delete();
+        $sync->syncRecord($album, $remote);
+        $this->assertSame(0, DB::connection('local')->table('albumes_paginas')->count());
+        $this->assertSame(1, DB::connection('local')->table('paginas')->count());
     }
 
     public function test_interrupted_copy_rolls_back_all_tables_and_success_time(): void

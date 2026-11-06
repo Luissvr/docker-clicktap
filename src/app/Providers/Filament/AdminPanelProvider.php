@@ -10,7 +10,6 @@ use App\Filament\Pages\StockTarjetas;
 use App\Filament\Pages\Ventas;
 use App\Filament\Resources\ClienteResource\Pages\ListClientes;
 use App\Filament\Resources\PaginaResource\Pages\ListPaginas;
-use App\Support\CatalogConnection;
 use Filament\Enums\ThemeMode;
 use Filament\FontProviders\LocalFontProvider;
 use Filament\Http\Middleware\Authenticate;
@@ -87,9 +86,9 @@ class AdminPanelProvider extends PanelProvider
                 scopes: ListPaginas::class
             )
             ->renderHook(
-                PanelsRenderHook::SIDEBAR_NAV_START,
-                fn (): string => CatalogConnection::enabled() && auth()->check()
-                    ? Blade::render('@livewire("catalog-sync-status")')
+                PanelsRenderHook::TOPBAR_END,
+                fn (): string => auth()->check()
+                    ? Blade::render('@persist("ct-connection-status")@livewire("connection-status")@endpersist')
                     : ''
             )
             ->renderHook(

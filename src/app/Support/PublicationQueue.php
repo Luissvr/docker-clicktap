@@ -43,6 +43,7 @@ class PublicationQueue
             $tasks[] = [
                 'id' => (string) Str::uuid(), 'page_id' => $page->getKey(),
                 'requested_at' => now()->toIso8601String(), 'name' => $page->nombre_publico,
+                'revision' => (int) $page->revision,
                 'type' => $type,
                 'events' => [['stage' => 'received', 'at' => now()->toIso8601String(), 'message' => 'Solicitud recibida por el servidor']],
             ];
@@ -110,6 +111,48 @@ class PublicationQueue
         return $cache->get('publication-result:'.$pageId);
     }
 
+    /**
+     * @param  list<string>  $pageIds
+     * @return array<string, array<string, mixed>>
+     */
+    public function pageStatuses(array $pageIds): array
+    {
+        if ($pageIds === []) {
+            return [];
+        }
+
+        $cache = $this->cache();
+        $requested = array_fill_keys($pageIds, true);
+        $statuses = [];
+        $results = $cache->many(array_map(fn (string $id): string => 'publication-result:'.$id, $pageIds));
+        foreach ($pageIds as $id) {
+            $result = $results['publication-result:'.$id] ?? null;
+            if (is_array($result)) {
+                $statuses[$id] = $result;
+            }
+        }
+
+        foreach ($cache->get('publication-tracking', []) as $task) {
+            $id = $task['page_id'] ?? null;
+            if (is_string($id) && isset($requested[$id])) {
+                $statuses[$id] = $task + ['state' => 'comprobando_cloudflare'];
+            }
+        }
+        foreach ($this->pendingTasks($cache) as $task) {
+            $id = $task['page_id'] ?? null;
+            if (is_string($id) && isset($requested[$id])) {
+                $statuses[$id] = $task + ['state' => 'pendiente'];
+            }
+        }
+        $running = $cache->get('publication-running');
+        $id = $running['page_id'] ?? null;
+        if (is_string($id) && isset($requested[$id])) {
+            $statuses[$id] = $running + ['state' => 'procesando'];
+        }
+
+        return $statuses;
+    }
+
     public function work(): void
     {
         $cache = $this->cache();
@@ -149,6 +192,9 @@ class PublicationQueue
             }
             try {
                 $page = CatalogConnection::remoteReads(fn () => Pagina::findOrFail($task['page_id']));
+                if (isset($task['revision']) && (int) $page->revision !== (int) $task['revision']) {
+                    throw new \RuntimeException('La página cambió desde que se solicitó la publicación. Revisa los cambios y vuelve a solicitarla.');
+                }
                 $withdraw = ($task['type'] ?? 'publish') === 'withdraw';
                 if ($withdraw) {
                     if ($page->activo) {
@@ -168,6 +214,7 @@ class PublicationQueue
                 $withdraw = ($task['type'] ?? 'publish') === 'withdraw';
                 $result = [
                     'state' => $withdraw ? 'retirada_fallida' : 'fallida',
+                    'diagnostic' => Str::limit($exception->getMessage(), 500),
                     'message' => $withdraw
                         ? 'No se pudo retirar el acceso. La página puede seguir visible; revisa la conexión y reintenta.'
                         : 'No se pudo confirmar el envío. Comprueba el repositorio y la conexión antes de reintentar.',
@@ -184,6 +231,11 @@ class PublicationQueue
 
                 return $completed;
             });
+            try {
+                app(PublicationHistory::class)->record($completed);
+            } catch (Throwable $exception) {
+                report($exception);
+            }
             if (isset($commit, $page) && in_array($result['state'], ['enviada', 'retirada_enviada'], true)) {
                 app(CloudflareDeploymentTracker::class)->track($page->fresh(), $commit, ($task['type'] ?? 'publish'), $completed);
             }
