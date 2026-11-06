@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use LogicException;
 
@@ -39,6 +40,8 @@ class Pagina extends Model
         'color_boton',
         'color_texto_boton',
         'activo',
+        'estado_comercial',
+        'venta_id',
         'contenido_extra',
         'actualizada_por',
         'publicacion_estado',
@@ -61,6 +64,9 @@ class Pagina extends Model
                 throw new LogicException('El slug de una página no se puede modificar.');
             }
             if ($pagina->isDirty('activo') && $pagina->activo) {
+                if (($pagina->estado_comercial ?? 'por_vender') !== 'por_vender') {
+                    throw new LogicException('Solo una página Por vender puede activarse.');
+                }
                 if ($pagina->papelera_en !== null) {
                     throw new LogicException('Restaura la página desde la papelera antes de activarla.');
                 }
@@ -89,6 +95,11 @@ class Pagina extends Model
     public function local(): BelongsTo
     {
         return $this->belongsTo(LocalNegocio::class, 'local_id');
+    }
+
+    public function albumes(): BelongsToMany
+    {
+        return $this->belongsToMany(AlbumPagina::class, 'album_pagina', 'pagina_id', 'album_id');
     }
 
     public function enlaces(): HasMany

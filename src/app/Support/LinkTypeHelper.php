@@ -106,11 +106,11 @@ final class LinkTypeHelper
     public static function itemLabel(array $state): HtmlString
     {
         $tipo = $state['tipo'] ?? 'web';
-        $nombre = trim((string) ($state['nombre'] ?? ''));
+        $nombre = trim((string) ($state['etiqueta'] ?? ''));
         $tipoNombre = self::label($tipo);
         $svg = self::iconSvg($tipo, 'w-6 h-6');
 
-        $titulo = $nombre !== '' ? $nombre : 'Nuevo enlace';
+        $titulo = $nombre !== '' ? $nombre : $tipoNombre;
         $escapedTitulo = htmlspecialchars($titulo);
 
         $html = '<span class="inline-flex items-center gap-2 max-w-full truncate text-sm">';

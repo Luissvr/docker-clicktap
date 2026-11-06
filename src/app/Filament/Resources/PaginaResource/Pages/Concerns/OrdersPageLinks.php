@@ -2,9 +2,14 @@
 
 namespace App\Filament\Resources\PaginaResource\Pages\Concerns;
 
+use App\Support\LinkTypeHelper;
+use Illuminate\Support\Str;
+
 trait OrdersPageLinks
 {
     public bool $isOrderingLinks = false;
+
+    public ?string $expandedLinkKey = null;
 
     /** @return array<string, string> */
     public function linkOrderOptions(): array
@@ -12,8 +17,8 @@ trait OrdersPageLinks
         $options = [];
 
         foreach ($this->data['enlaces'] ?? [] as $key => $link) {
-            $name = trim((string) ($link['nombre'] ?? ''));
-            $options[$key] = (count($options) + 1).'. '.($name !== '' ? $name : 'Nuevo enlace');
+            $name = trim((string) ($link['etiqueta'] ?? ''));
+            $options[$key] = (count($options) + 1).'. '.($name !== '' ? $name : LinkTypeHelper::label($link['tipo'] ?? null));
         }
 
         return $options;
@@ -22,6 +27,30 @@ trait OrdersPageLinks
     public function toggleLinkOrdering(): void
     {
         $this->isOrderingLinks = ! $this->isOrderingLinks;
+    }
+
+    public function addLinkOfType(string $type): ?string
+    {
+        if (! array_key_exists($type, LinkTypeHelper::options())) {
+            return null;
+        }
+
+        $this->expandedLinkKey = (string) Str::uuid();
+        $this->data['enlaces'][$this->expandedLinkKey] = [
+            'tipo' => $type,
+            'etiqueta' => match ($type) {
+                'review' => 'Déjanos una reseña',
+                'transferencia' => 'Copiar datos de transferencia',
+                default => LinkTypeHelper::label($type),
+            },
+            'banco_transferencia' => $type === 'transferencia' ? 'bancoestado' : 'none',
+            'place_id' => $type === 'review' ? ($this->data['contenido_extra']['place_id'] ?? null) : null,
+            'url' => $type === 'review' ? LinkTypeHelper::reviewUrlFromPlaceId($this->data['contenido_extra']['place_id'] ?? null) : null,
+            'copiar_texto' => $type === 'transferencia',
+            'activo' => true,
+        ];
+
+        return $this->expandedLinkKey;
     }
 
     public function moveSelectedLink(string $selectedKey, int $direction): void

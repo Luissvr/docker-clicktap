@@ -3,7 +3,10 @@
 namespace App\Filament\Pages;
 
 use App\Actions\RejectSaleAction;
+use App\Models\Pagina;
 use App\Support\BusinessLedger;
+use App\Support\CatalogConnection;
+use App\Support\PageSaleSnapshot;
 use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\Radio;
@@ -164,6 +167,7 @@ class Ventas extends Page implements HasForms
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+        app(PageSaleSnapshot::class)->invalidate($db);
 
         $this->redirect(static::getUrl(['venta' => $id]), navigate: true);
     }
@@ -202,9 +206,20 @@ class Ventas extends Page implements HasForms
     public function deleteDraft(): void
     {
         $db = app(BusinessLedger::class)->connection();
-        $deleted = $db->table('ventas')->where('id', $this->draftId())
-            ->where('estado', 'borrador')->delete();
-        abort_unless($deleted, 403);
+        $pageId = $db->transaction(function () use ($db): ?string {
+            $sale = $db->table('ventas')->where('id', $this->draftId())->where('estado', 'borrador')->lockForUpdate()->first();
+            abort_unless($sale, 403);
+            if ($sale->pagina_id) {
+                $db->table('paginas')->where('id', $sale->pagina_id)->where('venta_id', $sale->id)->update(['venta_id' => null]);
+            }
+            $db->table('ventas')->where('id', $sale->id)->delete();
+
+            return $sale->pagina_id;
+        });
+        app(PageSaleSnapshot::class)->invalidate($db);
+        if ($pageId) {
+            CatalogConnection::refreshAfterWrite(CatalogConnection::remoteReads(fn (): Pagina => Pagina::findOrFail($pageId)));
+        }
 
         Notification::make()->success()->title('Borrador eliminado')->send();
         $this->redirect(static::getUrl(), navigate: true);

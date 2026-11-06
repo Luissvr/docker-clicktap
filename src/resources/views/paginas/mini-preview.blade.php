@@ -231,6 +231,14 @@
             width: 28px;
             height: 28px;
         }
+        .transfer-logo {
+            display: block;
+            width: 28px;
+            height: 28px;
+            object-fit: contain;
+            border-radius: 4px;
+            background: #fff;
+        }
         .link-label {
             text-align: center;
             min-width: 0;

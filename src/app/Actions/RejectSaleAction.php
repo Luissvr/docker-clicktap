@@ -6,6 +6,7 @@ use App\Models\Pagina;
 use App\Models\User;
 use App\Support\BusinessLedger;
 use App\Support\CatalogConnection;
+use App\Support\PageSaleSnapshot;
 use App\Support\PublicationQueue;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -49,9 +50,11 @@ class RejectSaleAction
             if ($sale->pagina_id) {
                 $page = $database->table('paginas')->where('id', $sale->pagina_id)->lockForUpdate()->first();
                 abort_unless($page, 409, 'La página asociada a la venta ya no existe.');
-                if ($page->activo || ! in_array($page->publicacion_estado, ['retirada_pendiente', 'retirando', 'retirada_enviada', 'retirada'], true)) {
+                $commercialState = in_array($sale->estado, ['confirmada', 'cancelacion_pendiente'], true) ? null : 'rechazada';
+                if ($page->activo || $page->estado_comercial !== $commercialState || ! in_array($page->publicacion_estado, ['retirada_pendiente', 'retirando', 'retirada_enviada', 'retirada'], true)) {
                     $database->table('paginas')->where('id', $sale->pagina_id)->update([
                         'activo' => false,
+                        'estado_comercial' => $commercialState,
                         'publicacion_estado' => 'retirada_pendiente',
                         'actualizada_por' => $actor->getKey(),
                         'revision' => $database->raw('revision + 1'),
@@ -62,6 +65,7 @@ class RejectSaleAction
 
             return $sale->pagina_id;
         }, 3);
+        app(PageSaleSnapshot::class)->invalidate($database);
 
         if (! $pageId) {
             return null;

@@ -85,6 +85,10 @@ class SaleRejectionTest extends TestCase
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+        DB::table('paginas')->where('id', $page->id)->update([
+            'venta_id' => $id,
+            'estado_comercial' => $state === 'confirmada' ? 'vendida' : 'por_vender',
+        ]);
 
         return $id;
     }

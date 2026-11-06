@@ -21,7 +21,11 @@ final class PageTrash
             $source = CatalogConnection::enabled() ? 'supabase' : config('database.default');
             $sourceReady = $source === config('database.default')
                 ? Schema::hasColumn('paginas', 'papelera_en')
-                : Schema::connection($source)->hasColumn('paginas', 'papelera_en');
+                : app(CatalogSyncState::class)->cache()->remember(
+                    'page-trash-source-schema:v1',
+                    60,
+                    fn (): bool => Schema::connection($source)->hasColumn('paginas', 'papelera_en'),
+                );
 
             return $this->schemaAvailable = $sourceReady
                 && (! CatalogConnection::enabled() || Schema::connection('local')->hasColumn('paginas', 'papelera_en'));
@@ -129,6 +133,7 @@ final class PageTrash
             ]);
             $page->delete();
         });
+        app(PageSaleSnapshot::class)->invalidate();
     }
 
     public function canLeaveTrash(Pagina $page): bool

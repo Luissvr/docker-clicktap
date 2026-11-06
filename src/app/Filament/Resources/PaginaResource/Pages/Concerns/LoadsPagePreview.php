@@ -16,11 +16,6 @@ trait LoadsPagePreview
         );
     }
 
-    public function updatedData(mixed $value, mixed $key = null): void
-    {
-        $this->loadPagePreview();
-    }
-
     public function renderFinalPagePreview(): string
     {
         return PagePreviewCompiler::compile(

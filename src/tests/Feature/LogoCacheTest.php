@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Filament\Resources\PaginaResource\Pages\EditPagina;
 use App\Models\Pagina;
 use App\Models\User;
 use App\Support\LocalCatalogSync;
@@ -10,8 +11,10 @@ use App\Support\PagePreviewCompiler;
 use App\Support\PageTrash;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Http\Client\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
+use Livewire\Livewire;
 use RuntimeException;
 use Tests\TestCase;
 
@@ -62,6 +65,37 @@ class LogoCacheTest extends TestCase
         $this->assertNotNull($cache->path($page, retryMissing: true));
         $this->assertTrue($cache->isCached($page));
         $this->assertFalse($cache->isKnownMissing($page));
+    }
+
+    public function test_missing_logo_can_be_replaced_without_losing_its_reference_before_save(): void
+    {
+        $page = Pagina::factory()->create(['logo_disk' => 'supabase', 'logo_path' => 'logos/missing.png']);
+        $this->assertNull(app(LogoCache::class)->path($page));
+        $this->actingAs(User::factory()->create(['activo' => true]));
+
+        Livewire::test(EditPagina::class, ['record' => $page->getRouteKey()])
+            ->assertFormSet(['logo_path' => []])
+            ->fillForm(['nombre_publico' => 'Nombre editado'])
+            ->call('save', false)
+            ->call('getFormUploadedFiles', 'data.logo_path')
+            ->assertHasNoFormErrors();
+
+        $this->assertSame('logos/missing.png', $page->fresh()->logo_path);
+
+        Livewire::test(EditPagina::class, ['record' => $page->getRouteKey()])
+            ->fillForm(['logo_path' => UploadedFile::fake()->image('reemplazo.png')])
+            ->call('save', false)
+            ->call('getFormUploadedFiles', 'data.logo_path')
+            ->assertHasNoFormErrors();
+
+        $this->assertNotSame('logos/missing.png', $page->fresh()->logo_path);
+        $this->assertTrue(Storage::disk('supabase')->exists($page->fresh()->logo_path));
+
+        $editor = Livewire::test(EditPagina::class, ['record' => $page->getRouteKey()]);
+        $editor->instance()->data['logo_path'] = $page->fresh()->logo_path;
+        $editor->instance()->hydrate();
+        $this->assertIsArray($editor->instance()->data['logo_path']);
+        $this->assertCount(1, $editor->instance()->getFormUploadedFiles('data.logo_path'));
     }
 
     public function test_missing_supabase_logo_uses_the_read_only_published_copy(): void

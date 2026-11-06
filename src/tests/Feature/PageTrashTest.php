@@ -130,8 +130,8 @@ class PageTrashTest extends TestCase
         ]);
 
         Livewire::test(PublicacionesSitio::class)
-            ->assertSee('Eliminar directamente')
             ->set('selectedPages', [$first->id, $second->id])
+            ->assertSee('Eliminar directo')
             ->call('deleteSelectedDraftsDirectly')
             ->assertHasNoErrors();
 
@@ -190,7 +190,7 @@ class PageTrashTest extends TestCase
 
         Livewire::test(PublicacionesSitio::class)
             ->set('filter', 'trash')
-            ->assertSee('Vaciar papelera de borradores (1)')
+            ->assertSee('Vaciar papelera (1)')
             ->call('emptyDraftTrash')
             ->assertHasNoErrors();
 

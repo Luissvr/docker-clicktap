@@ -2,13 +2,17 @@
 
 namespace App\Filament\Resources\PaginaResource\Pages;
 
+use App\Filament\Pages\PublicacionesSitio;
 use App\Filament\Pages\Ventas;
 use App\Filament\Resources\PaginaResource;
 use App\Filament\Resources\PaginaResource\Pages\Concerns\LoadsPagePreview;
 use App\Filament\Resources\PaginaResource\Pages\Concerns\OrdersPageLinks;
 use App\Models\LocalNegocio;
 use App\Support\BusinessLedger;
+use App\Support\PageSaleSnapshot;
+use App\Support\PublicationQueue;
 use App\Support\UsesCatalogTransactions;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Database\Eloquent\Model;
 use Livewire\Attributes\Locked;
@@ -17,7 +21,9 @@ class CreatePagina extends CreateRecord
 {
     use LoadsPagePreview;
     use OrdersPageLinks;
-    use UsesCatalogTransactions;
+    use UsesCatalogTransactions {
+        commitDatabaseTransaction as commitCatalogTransaction;
+    }
 
     public function create(bool $another = false): void
     {
@@ -49,8 +55,27 @@ class CreatePagina extends CreateRecord
     {
         unset($data['contenido_extra']['place_id']);
         $data['actualizada_por'] = auth()->id();
+        $data['activo'] = true;
+        $data['estado_comercial'] = 'por_vender';
+        if ($this->ventaId) {
+            $data['venta_id'] = $this->ventaId;
+        }
 
         return $data;
+    }
+
+    protected function commitDatabaseTransaction(): void
+    {
+        $this->commitCatalogTransaction();
+        if ($this->getRecord()) {
+            try {
+                app(PublicationQueue::class)->request($this->getRecord());
+            } catch (\Throwable $exception) {
+                report($exception);
+                Notification::make()->warning()->persistent()->title('Página guardada; publicación pendiente')
+                    ->body('No se pudo solicitar el envío. Revisa el estado técnico de la página para reintentarlo.')->send();
+            }
+        }
     }
 
     protected function handleRecordCreation(array $data): Model
@@ -68,6 +93,7 @@ class CreatePagina extends CreateRecord
                     'pagina_id' => $page->getKey(),
                     'updated_at' => now(),
                 ]);
+            app(PageSaleSnapshot::class)->invalidate(app(BusinessLedger::class)->connection());
         }
 
         return $page;
@@ -77,6 +103,6 @@ class CreatePagina extends CreateRecord
     {
         return $this->ventaId
             ? Ventas::getUrl(['venta' => $this->ventaId])
-            : parent::getRedirectUrl();
+            : PublicacionesSitio::getUrl();
     }
 }

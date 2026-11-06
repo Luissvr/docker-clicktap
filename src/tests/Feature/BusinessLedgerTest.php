@@ -2,16 +2,73 @@
 
 namespace Tests\Feature;
 
+use App\Models\Pagina;
 use App\Models\User;
 use App\Support\BusinessLedger;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Tests\TestCase;
 
 class BusinessLedgerTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_confirming_a_linked_sale_marks_the_page_sold_once(): void
+    {
+        $actor = User::factory()->create();
+        $this->actingAs($actor);
+        $ledger = app(BusinessLedger::class);
+        $ledger->initializeCatalog();
+        $card = DB::table('inventario_productos')->where('sku', 'TAR-GOOGLE')->value('id');
+        $ledger->receive($card, 2, 4000, 4000, null, null, '2026-10-21', 'sale-stock');
+        $page = Pagina::factory()->create();
+        $saleId = (string) Str::uuid();
+        DB::table('ventas')->insert([
+            'id' => $saleId, 'pagina_id' => $page->id, 'estado' => 'borrador',
+            'cliente_nombre' => 'Cliente Demo', 'cantidad_tarjetas' => 1,
+            'precio_recibido_clp' => 15000, 'registrado_por' => $actor->id,
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+        DB::table('venta_items')->insert([
+            'id' => (string) Str::uuid(), 'venta_id' => $saleId, 'producto_id' => $card,
+            'cantidad' => 1, 'precio_unitario_clp' => 15000,
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+
+        $ledger->confirmFieldSale($saleId);
+        $ledger->confirmFieldSale($saleId);
+
+        $this->assertDatabaseHas('paginas', ['id' => $page->id, 'estado_comercial' => 'vendida']);
+        $this->assertDatabaseHas('ventas', ['id' => $saleId, 'estado' => 'confirmada']);
+        $this->assertSame(1, DB::table('inventario_pedidos')->count());
+    }
+
+    public function test_confirming_a_rejected_page_is_blocked_before_stock_changes(): void
+    {
+        $actor = User::factory()->create();
+        $this->actingAs($actor);
+        $page = Pagina::factory()->create(['activo' => false, 'estado_comercial' => 'rechazada']);
+        $saleId = (string) Str::uuid();
+        DB::table('ventas')->insert([
+            'id' => $saleId, 'pagina_id' => $page->id, 'estado' => 'borrador',
+            'cliente_nombre' => 'Cliente Demo', 'registrado_por' => $actor->id,
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+
+        try {
+            app(BusinessLedger::class)->confirmFieldSale($saleId);
+            $this->fail('La venta de una página rechazada no debe confirmarse.');
+        } catch (HttpException $exception) {
+            $this->assertSame(409, $exception->getStatusCode());
+        }
+
+        $this->assertDatabaseHas('ventas', ['id' => $saleId, 'estado' => 'borrador']);
+        $this->assertDatabaseHas('paginas', ['id' => $page->id, 'estado_comercial' => 'rechazada']);
+        $this->assertSame(0, DB::table('inventario_pedidos')->count());
+    }
 
     public function test_chips_are_aparted_once_and_acrylic_production_carries_real_costs(): void
     {

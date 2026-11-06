@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\Pagina;
 use Illuminate\Database\Connection;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
@@ -237,16 +238,20 @@ class BusinessLedger
 
     public function confirmFieldSale(string $saleId): void
     {
-        $this->connection()->transaction(function () use ($saleId): void {
+        $pageId = $this->connection()->transaction(function () use ($saleId): ?string {
             $sale = $this->connection()->table('ventas')->where('id', $saleId)->lockForUpdate()->first();
             if (! $sale) {
                 $this->invalid('venta', 'La venta ya no está disponible.');
             }
             if ($sale->estado === 'confirmada') {
-                return;
+                return $sale->pagina_id;
             }
             if ($sale->estado !== 'borrador' || trim($sale->cliente_nombre ?? '') === '') {
                 $this->invalid('venta', 'La venta requiere el nombre del cliente y debe seguir en borrador.');
+            }
+            if ($sale->pagina_id) {
+                $page = $this->connection()->table('paginas')->where('id', $sale->pagina_id)->lockForUpdate()->first();
+                abort_unless($page && $page->estado_comercial === 'por_vender', 409, 'La página ya no está Por vender.');
             }
 
             $items = $this->connection()->table('venta_items')->where('venta_id', $saleId)->orderBy('id')->get();
@@ -285,7 +290,20 @@ class BusinessLedger
                 'confirmada_en' => now('America/Santiago'),
                 'updated_at' => now(),
             ]);
+            if ($sale->pagina_id) {
+                $this->connection()->table('paginas')->where('id', $sale->pagina_id)->update([
+                    'estado_comercial' => 'vendida', 'revision' => $this->connection()->raw('revision + 1'),
+                    'updated_at' => now(),
+                ]);
+            }
+
+            return $sale->pagina_id;
         }, 3);
+        app(PageSaleSnapshot::class)->invalidate($this->connection());
+        if ($pageId) {
+            $page = CatalogConnection::remoteReads(fn (): Pagina => Pagina::findOrFail($pageId));
+            CatalogConnection::refreshAfterWrite($page);
+        }
     }
 
     public function fulfillOrder(string $orderId, string $key): void

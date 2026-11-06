@@ -28,6 +28,8 @@ use Throwable;
 
 class PaginaResource extends Resource
 {
+    protected static bool $shouldRegisterNavigation = false;
+
     protected static ?string $model = Pagina::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-document-duplicate';
@@ -58,7 +60,7 @@ class PaginaResource extends Resource
                     Forms\Components\Group::make([
                         Forms\Components\View::make('filament.components.editor-navigation'),
                         Forms\Components\Section::make('Página pública')
-                            ->extraAttributes(['x-show' => "!desktopEditor || editorTab === 'datos' || editorTab === 'todo'"])
+                            ->extraAttributes(['x-show' => "editorTab === 'datos'"])
                             ->schema([
                                 Forms\Components\TextInput::make('nombre_publico')
                                     ->label('Nombre del local')
@@ -77,12 +79,6 @@ class PaginaResource extends Resource
                                     ->maxLength(255)
                                     ->unique(ignoreRecord: true)
                                     ->disabledOn('edit'),
-                                Forms\Components\Textarea::make('descripcion')
-                                    ->label('Descripción')
-                                    ->rows(3)
-                                    ->helperText('Máximo 150 palabras. Se mostrará con texto justificado.')
-                                    ->rules([new PageDescription])
-                                    ->columnSpanFull(),
                                 Forms\Components\Textarea::make('direccion_publica')
                                     ->label('Dirección')
                                     ->rows(2)
@@ -106,18 +102,51 @@ class PaginaResource extends Resource
                                     ->rows(2)
                                     ->maxLength(1000)
                                     ->helperText('Se muestra debajo de ubicación y contacto.'),
-                                Forms\Components\Select::make('contenido_extra.transfer_logo')
-                                    ->label('Logo en botones de transferencia')
-                                    ->options(TransferBank::options())
-                                    ->default('none')
-                                    ->helperText('Se utiliza en todos los enlaces configurados para copiar datos de transferencia.'),
+                                Forms\Components\TextInput::make('contenido_extra.place_id')
+                                    ->label('Place ID de Google')
+                                    ->helperText('Se usa para el enlace de reseña.')
+                                    ->regex('/^[A-Za-z0-9_-]+$/')
+                                    ->maxLength(255)
+                                    ->afterStateHydrated(function (Forms\Set $set, ?Pagina $record): void {
+                                        $review = $record?->enlaces?->firstWhere('tipo', 'review');
+                                        $set('contenido_extra.place_id', LinkTypeHelper::reviewPlaceIdFromUrl($review?->url));
+                                    })
+                                    ->live(onBlur: true)
+                                    ->afterStateUpdated(function (?string $state, Forms\Get $get, Forms\Set $set): void {
+                                        $links = $get('enlaces') ?? [];
+                                        foreach ($links as &$link) {
+                                            if (($link['tipo'] ?? null) === 'review') {
+                                                $link['place_id'] = $state;
+                                                $link['url'] = LinkTypeHelper::reviewUrlFromPlaceId($state);
+                                            }
+                                        }
+                                        $set('enlaces', $links);
+                                    }),
+                                Forms\Components\Textarea::make('descripcion')
+                                    ->label('Descripción')
+                                    ->rows(3)
+                                    ->helperText('Máximo 150 palabras. Se mostrará con texto justificado.')
+                                    ->rules([new PageDescription])
+                                    ->columnSpanFull(),
+                            ])->columns(2),
+
+                        Forms\Components\Section::make('Logo')
+                            ->extraAttributes(['x-show' => "editorTab === 'logo'"])
+                            ->description('Carga el logo y escoge su presentación.')
+                            ->schema([
                                 // Async Alpine removes x-ignore after loading. Keep it in the server HTML
                                 // (also on color pickers) so Livewire cannot initialize unloaded clones.
                                 Forms\Components\FileUpload::make('logo_path')
+                                    ->extraAttributes(['class' => 'ct-logo-upload'])
                                     ->extraAlpineAttributes(['x-ignore' => ''])
                                     ->label('Logo o imagen principal')
                                     ->image()
                                     ->fetchFileInformation(false)
+                                    ->afterStateHydrated(static function (Forms\Components\BaseFileUpload $component, ?Pagina $record): void {
+                                        if ($record instanceof Pagina && app(LogoCache::class)->isKnownMissing($record)) {
+                                            $component->state([]);
+                                        }
+                                    })
                                     ->getUploadedFileUsing(static function (Forms\Components\BaseFileUpload $component, string $file, string|array|null $storedFileNames): ?array {
                                         $record = $component->getRecord();
                                         if ($record instanceof Pagina && $record->logo_path === $file && app(LogoCache::class)->isKnownMissing($record)) {
@@ -175,35 +204,28 @@ class PaginaResource extends Resource
                                     ->default(false)
                                     ->columnSpanFull(),
 
-                                Forms\Components\Toggle::make('activo')
-                                    ->label('Lista para publicar')
-                                    ->default(false),
-                            ])->columns(2),
-
-                        Forms\Components\Section::make('Logo')
-                            ->extraAttributes(['x-show' => "!desktopEditor || editorTab === 'datos' || editorTab === 'todo'"])
-                            ->description('Ajusta el formato de presentación sin deformar ni cortar tu imagen.')
-                            ->schema([
-                                Forms\Components\Select::make('logo_layout')
+                                Forms\Components\Radio::make('logo_layout')
                                     ->label('Forma')
                                     ->options([
-                                        'original' => 'Original, imagen completa',
-                                        'rounded' => 'Cuadrado con esquinas suaves',
-                                        'round' => 'Circular con recorte',
+                                        'original' => 'Original',
+                                        'rounded' => 'Esquinas suaves',
+                                        'round' => 'Circular',
                                     ])
                                     ->default('original')
                                     ->required()
+                                    ->extraAttributes(['class' => 'ct-visual-options'])
                                     ->live(),
-                                Forms\Components\Select::make('logo_width')
+                                Forms\Components\Radio::make('logo_width')
                                     ->label('Tamaño')
-                                    ->options([96 => 'Pequeño · 96 px', 128 => 'Mediano · 128 px', 160 => 'Estándar · 160 px', 176 => 'Grande · 176 px', 240 => 'Extra grande · 240 px'])
+                                    ->options([96 => 'Pequeño', 160 => 'Mediano', 240 => 'Grande'])
                                     ->default(160)
                                     ->required()
+                                    ->extraAttributes(['class' => 'ct-visual-options'])
                                     ->live(),
-                            ])->columns(2),
+                            ])->columns(['default' => 1, 'lg' => 2]),
 
                         Forms\Components\Section::make('Apariencia')
-                            ->extraAttributes(['x-show' => "!desktopEditor || editorTab === 'apariencia' || editorTab === 'todo'"])
+                            ->extraAttributes(['x-show' => "editorTab === 'apariencia'"])
                             ->headerActions([
                                 Forms\Components\Actions\Action::make('restaurarColoresRecomendados')
                                     ->label('Restaurar colores recomendados')
@@ -251,8 +273,7 @@ class PaginaResource extends Resource
                                     ])
                                     ->default('comercio')
                                     ->required()
-                                    ->live()
-                                    ->afterStateUpdated(fn (Component $livewire) => $livewire->loadPagePreview()),
+                                    ->live(),
                                 Forms\Components\Select::make('tipografia')
                                     ->label('Tipografía')
                                     ->options(TypographyHelper::options())
@@ -301,7 +322,7 @@ class PaginaResource extends Resource
                             ])->columns(['default' => 1, 'sm' => 2, 'lg' => 3]),
 
                         Forms\Components\Section::make('Enlaces')
-                            ->extraAttributes(['x-show' => "!desktopEditor || editorTab === 'enlaces' || editorTab === 'todo'"])
+                            ->extraAttributes(['x-show' => "editorTab === 'enlaces'"])
                             ->key('data.pagina-enlaces-section')
                             ->headerActions([
                                 Forms\Components\Actions\Action::make('ordenarEnlaces')
@@ -354,10 +375,14 @@ class PaginaResource extends Resource
                                     ->action(fn (array $data, Component $livewire) => $livewire->deleteSelectedLinks($data['enlaces'])),
                             ])
                             ->schema([
+                                Forms\Components\View::make('filament.components.link-type-picker'),
                                 Forms\Components\Repeater::make('enlaces')
                                     ->label('')
                                     ->relationship()
-                                    ->defaultItems(0)
+                                    ->default([
+                                        ['tipo' => 'review', 'etiqueta' => 'Déjanos una reseña', 'activo' => true, 'copiar_texto' => false],
+                                        ['tipo' => 'transferencia', 'etiqueta' => 'Copiar datos de transferencia', 'banco_transferencia' => 'bancoestado', 'activo' => true, 'copiar_texto' => true],
+                                    ])
                                     ->schema([
                                         Forms\Components\Select::make('tipo')
                                             ->label('Tipo de enlace')
@@ -381,17 +406,12 @@ class PaginaResource extends Resource
                                                 }
                                             })
                                             ->columnSpan(['default' => 1, 'md' => 1]),
-                                        Forms\Components\TextInput::make('nombre')
-                                            ->label('Nombre del enlace')
-                                            ->placeholder('Ej. WhatsApp Ventas, Instagram...')
-                                            ->helperText('Identificador para la lista interna.')
-                                            ->maxLength(255)
-                                            ->live(onBlur: true)
-                                            ->columnSpan(['default' => 1, 'md' => 1]),
+                                        Forms\Components\Hidden::make('nombre')
+                                            ->dehydrated(),
                                         Forms\Components\Select::make('banco_transferencia')
                                             ->label('Banco del botón')
                                             ->options(TransferBank::options())
-                                            ->default('none')
+                                            ->default('bancoestado')
                                             ->helperText('El distintivo se mostrará dentro de este botón de transferencia.')
                                             ->visible(fn (Forms\Get $get): bool => $get('tipo') === 'transferencia')
                                             ->dehydratedWhenHidden(),
@@ -429,6 +449,7 @@ class PaginaResource extends Resource
                                             ->maxLength(255)
                                             ->regex('/^[A-Za-z0-9_-]+$/')
                                             ->dehydrated(false)
+                                            ->hidden()
                                             ->live(debounce: 500)
                                             ->afterStateHydrated(function (Forms\Get $get, Forms\Set $set): void {
                                                 $set('place_id', LinkTypeHelper::reviewPlaceIdFromUrl($get('url')));
@@ -499,7 +520,7 @@ class PaginaResource extends Resource
                                         'class' => $livewire->isOrderingLinks ? 'ct-link-ordering' : '',
                                     ])
                                     ->deletable(false)
-                                    ->collapsed()
+                                    ->collapsed(fn (Component $livewire, $item): bool => $item?->getStatePath() !== 'data.enlaces.'.$livewire->expandedLinkKey)
                                     ->collapsible(fn (Component $livewire): bool => ! $livewire->isOrderingLinks)
                                     ->collapseAllAction(fn (Forms\Components\Actions\Action $action): Forms\Components\Actions\Action => $action->hidden())
                                     ->expandAllAction(fn (Forms\Components\Actions\Action $action): Forms\Components\Actions\Action => $action->hidden())
@@ -524,14 +545,14 @@ class PaginaResource extends Resource
                                             ->livewireClickHandlerEnabled(false),
                                     ])
                                     ->itemLabel(fn (array $state): HtmlString => LinkTypeHelper::itemLabel($state))
-                                    ->addActionLabel('Agregar enlace')
+                                    ->addable(false)
                                     ->columnSpanFull(),
                             ]),
                     ])
                         ->extraAttributes([
                             'class' => 'ct-editor-fields',
                             'x-on:resize.window.debounce.150ms' => "desktopEditor = window.matchMedia('(min-width: 1024px)').matches",
-                            'x-on:form-validation-error.window' => "editorTab = 'todo'",
+                            'x-on:form-validation-error.window' => "editorTab = document.querySelector('[aria-invalid=true]')?.closest('[x-show]')?.getAttribute('x-show')?.match(/editorTab === '([^']+)'/)?.[1] || 'datos'",
                             'x-data' => <<<'JS'
                                 {
                                     selectedLink: null,
@@ -546,12 +567,11 @@ class PaginaResource extends Resource
                                 }
                                 JS,
                         ])
-                        ->live(onBlur: true)
                         ->columnSpan(['default' => 12, 'xl' => 7]),
 
                     Forms\Components\Group::make([
+                        Forms\Components\View::make('filament.components.editor-form-actions'),
                         Forms\Components\Section::make('Vista previa')
-                            ->description('Se actualiza al cambiar el contenido y la apariencia.')
                             ->key('data.vista-previa-section')
                             ->headerActions([
                                 Forms\Components\Actions\Action::make('cargarPersonalizacion')
@@ -562,8 +582,7 @@ class PaginaResource extends Resource
                             ])
                             ->schema([
                                 Forms\Components\View::make('filament.components.pagina-live-preview'),
-                            ])
-                            ->collapsible(),
+                            ]),
                     ])->extraAttributes(['class' => 'ct-editor-preview'])->columnSpan(['default' => 12, 'xl' => 5]),
                 ]),
         ]);
@@ -633,13 +652,13 @@ class PaginaResource extends Resource
                     ->url(fn (Pagina $record): string => route('paginas.preview', ['pagina' => $record, 'device' => 'mobile']))
                     ->openUrlInNewTab(),
                 Tables\Actions\Action::make('publish')
-                    ->label('Publicar')
+                    ->label('Reintentar publicación')
                     ->icon('heroicon-o-cloud-arrow-up')
                     ->color('success')
                     ->requiresConfirmation()
-                    ->modalHeading('Publicar página')
+                    ->modalHeading('Reintentar publicación')
                     ->modalDescription('Se enviará únicamente esta página. Las demás se conservarán como están en producción.')
-                    ->visible(fn (Pagina $record): bool => $record->activo && (! is_array(config('clicktap.publication_slugs')) || in_array($record->slug, config('clicktap.publication_slugs'), true) || app(PageTrash::class)->isUnpublishedDraft($record)))
+                    ->visible(fn (Pagina $record): bool => $record->estado_comercial !== 'rechazada' && $record->publicacion_estado === 'fallida' && $record->activo)
                     ->action(function (Pagina $record): void {
                         try {
                             app(PublicationQueue::class)->request($record);

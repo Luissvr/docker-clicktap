@@ -2,7 +2,9 @@
     $compiledHtml = isset($getLivewire) ? $getLivewire()->compiledPagePreviewHtml : null;
 @endphp
 
-<div class="ct-live-preview-wrapper flex flex-col items-center w-full py-2 select-none" wire:init="loadPagePreview">
+<div class="ct-live-preview-wrapper flex flex-col items-center w-full py-2 select-none" x-data="{ mobilePreviewOpen: false, desktopPreview: window.matchMedia('(min-width: 1024px)').matches }" x-on:resize.window.debounce.150ms="desktopPreview = window.matchMedia('(min-width: 1024px)').matches">
+    <button type="button" class="ct-mobile-preview-toggle" x-on:click="mobilePreviewOpen = !mobilePreviewOpen" x-bind:aria-expanded="String(mobilePreviewOpen)"><span>Ver vista previa</span><span aria-hidden="true" x-text="mobilePreviewOpen ? '−' : '+'"></span></button>
+    <div class="ct-live-preview-content w-full flex flex-col items-center" x-show="desktopPreview || mobilePreviewOpen">
     <div class="w-full mb-4 text-center"
         x-data="{
             opening: false,
@@ -49,17 +51,13 @@
         >
             <span class="inline-flex items-center gap-2">
                 <x-filament::loading-indicator x-cloak x-show="opening" class="h-4 w-4" aria-hidden="true" />
-                Abrir vista final
+                Abrir vista
             </span>
         </x-filament::button>
         <p x-cloak x-show="error" x-text="error" role="alert" class="mt-2 text-sm text-danger-600"></p>
     </div>
-    <div class="relative w-full max-w-[340px] rounded-[42px] p-[10px] bg-[#1a1f26] shadow-2xl ring-1 ring-black/15 dark:ring-white/10">
-        <div class="absolute top-[18px] left-1/2 -translate-x-1/2 w-24 h-4 bg-black rounded-full z-20 flex items-center justify-end pr-2.5 pointer-events-none">
-            <div class="w-2.5 h-2.5 rounded-full bg-[#111827] ring-1 ring-gray-800"></div>
-        </div>
-
-        <div class="ct-preview-screen relative w-full rounded-[32px] overflow-hidden bg-white dark:bg-gray-900 shadow-inner h-[590px]"
+    <div class="relative w-full max-w-[340px]">
+        <div class="ct-preview-screen relative w-full overflow-hidden bg-white dark:bg-gray-900 h-[590px]"
             wire:ignore
             x-data="{ html: $wire.entangle('compiledPagePreviewHtml'), position: 0,
                 updatePreview() {
@@ -90,16 +88,17 @@
             }"
             x-init="$watch('html', () => updatePreview()); updatePreview()"
         >
-                <p x-show="html === null" class="p-8 pt-16 text-center text-sm text-gray-600" role="status">Preparando vista previa…</p>
+                <p x-show="html === null" class="p-8 pt-16 text-center text-sm text-gray-600" role="status">Pulsa «Actualizar vista previa» para ver los cambios.</p>
                 <iframe
                     x-ref="frame"
                     @if ($compiledHtml !== null) srcdoc="{{ $compiledHtml }}" @endif
                     x-show="html !== null"
                     x-on:load="onPreviewLoad()"
-                    class="w-full h-full border-0 rounded-[32px]"
+                    class="w-full h-full border-0"
                     sandbox="allow-same-origin"
                     title="Vista previa"
                 ></iframe>
         </div>
+    </div>
     </div>
 </div>
