@@ -155,7 +155,7 @@
             <p class="rounded-xl border border-[#EACB77] bg-[#FFF8DE] p-4 text-sm text-[#854D0E]">La papelera estará disponible después de actualizar el catálogo.</p>
         @endunless
 
-        @if ($trashAvailable)
+        @if ($trashAvailable || $selectableIds !== [])
             <div class="ct-selection-bar" role="toolbar" aria-label="Acciones sobre las páginas seleccionadas">
                 <div class="ct-sel-main">
                     <div class="ct-sel-info">
@@ -177,8 +177,11 @@
                             <button type="button" wire:click="emptyDraftTrash" wire:confirm="¿Vaciar la papelera de borradores nunca publicados? Se eliminarán definitivamente {{ $draftsInTrash }} borradores. Las páginas que estuvieron publicadas permanecerán protegidas." @disabled($draftsInTrash === 0) class="ct-sel-btn ct-sel-btn-solid-danger">Vaciar papelera ({{ $draftsInTrash }})</button>
                         @else
                             <button type="button" x-on:click="rejectOpen = ! rejectOpen" x-bind:aria-expanded="rejectOpen" disabled x-bind:disabled="! canRejectSelected" class="ct-sel-btn">Rechazar</button>
-                            <button type="button" wire:click="moveSelectedDraftsToTrash" wire:confirm="¿Enviar los borradores seleccionados a la papelera durante 30 días?" disabled x-bind:disabled="! canActOnDrafts" class="ct-sel-btn">A papelera</button>
-                            <button type="button" wire:click="deleteSelectedDraftsDirectly" wire:confirm="¿Eliminar definitivamente los borradores seleccionados y sus enlaces, sin pasar por la papelera? Esta acción no se puede deshacer." disabled x-bind:disabled="! canActOnDrafts" class="ct-sel-btn ct-sel-btn-danger">Eliminar directo</button>
+                            <button type="button" wire:click="publishSelectedDrafts" wire:confirm="¿Activar y solicitar la publicación en Cloudflare de los borradores seleccionados?" wire:loading.attr="disabled" wire:target="publishSelectedDrafts" disabled x-bind:disabled="! canActOnDrafts" class="ct-sel-btn ct-sel-btn-primary">Publicar seleccionados</button>
+                            @if ($trashAvailable)
+                                <button type="button" wire:click="moveSelectedDraftsToTrash" wire:confirm="¿Enviar los borradores seleccionados a la papelera durante 30 días?" disabled x-bind:disabled="! canActOnDrafts" class="ct-sel-btn">A papelera</button>
+                                <button type="button" wire:click="deleteSelectedDraftsDirectly" wire:confirm="¿Eliminar definitivamente los borradores seleccionados y sus enlaces, sin pasar por la papelera? Esta acción no se puede deshacer." disabled x-bind:disabled="! canActOnDrafts" class="ct-sel-btn ct-sel-btn-danger">Eliminar directo</button>
+                            @endif
                         @endif
                     </div>
                 </div>
@@ -235,7 +238,7 @@
                     <li wire:key="publication-page-{{ $page->id }}" class="ct-pages-card isolate flex min-w-0 flex-col overflow-hidden rounded-2xl border border-[#DCE0D5] bg-white shadow-sm" x-data="{ withdrawalOpen: false }">
                         <div class="relative flex h-40 items-center justify-center overflow-hidden border-b border-[#DCE0D5]" style="background-color: {{ $coverColor }}">
                             <div class="absolute inset-0 bg-gradient-to-br from-white/50 via-transparent to-[#101010]/10"></div>
-                            @if ($page->papelera_en === null || ($trashAvailable && in_array($page->id, $selectableIds, true)))
+                            @if ($page->papelera_en === null || in_array($page->id, $selectableIds, true))
                                 <label class="absolute left-3 top-3 z-20 flex min-h-11 items-center gap-2 rounded-lg bg-white/95 px-3 text-xs font-semibold text-[#101010] shadow-sm">
                                     <input type="checkbox" wire:model="selectedPages" value="{{ $page->id }}" data-select-page data-name="{{ $page->nombre_publico ?: $page->slug }}" data-draft="{{ in_array($page->id, $selectableIds, true) ? '1' : '0' }}" data-rejectable="{{ $isForSale && $page->papelera_en === null ? '1' : '0' }}" x-on:click="rangeClick($event)" class="rounded border-[#596052] text-[#375500] focus:ring-[#5B8F00]" />
                                     Seleccionar
