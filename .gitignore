@@ -44,3 +44,5 @@ Thumbs.db
 *.njsproj
 *.sln
 *.sw?
+/src/.env.supabase
+/src/.env.local-respaldo
