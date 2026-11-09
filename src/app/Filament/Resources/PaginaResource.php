@@ -59,6 +59,8 @@ class PaginaResource extends Resource
                 ->schema([
                     Forms\Components\Group::make([
                         Forms\Components\View::make('filament.components.editor-navigation'),
+                        Forms\Components\View::make('filament.components.business-research')
+                            ->visible(fn (string $operation): bool => $operation === 'create'),
                         Forms\Components\Section::make('Página pública')
                             ->extraAttributes(['x-show' => "editorTab === 'datos'"])
                             ->schema([
