@@ -272,7 +272,7 @@ class BusinessInvestigator
      */
     private function hours(array $hours): string
     {
-        return collect($hours)->map(fn (string $range, string $day): string => Str::ucfirst($day).': '.$range)->implode("\n");
+        return (new OpeningHoursFormatter)->format($hours);
     }
 
     private function origin(string $url): string

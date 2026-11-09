@@ -46,6 +46,9 @@ class BusinessResearchQueueTest extends TestCase
             if (isset($place['phone'])) {
                 $node[7] = ['tel:'.$place['phone']];
             }
+            if (isset($place['hours'])) {
+                $node[34] = array_map(fn (string $day): array => [$day, null, null, [[$place['hours'][$day]]]], array_keys($place['hours']));
+            }
 
             return $node;
         }, $places);
@@ -117,6 +120,24 @@ class BusinessResearchQueueTest extends TestCase
 
         $this->assertSame('esperando_eleccion', $this->queue()->find($job['id'])['estado']);
         Http::assertSentCount(2);
+    }
+
+    public function test_opening_hours_are_grouped_by_consecutive_days_with_the_same_schedule(): void
+    {
+        $this->fakeMaps([$this->place('', ['website' => null, 'hours' => [
+            'lunes' => '8 a. m.–7 p. m.', 'martes' => '8 a. m.–7 p. m.', 'miércoles' => '8 a. m.–7 p. m.',
+            'jueves' => '8 a. m.–7 p. m.', 'viernes' => '8 a. m.–7 p. m.', 'sábado' => '8 a. m.–7 p. m.',
+            'domingo' => '12–6:30 p. m.',
+        ]])]);
+        $job = $this->queue()->start('user-1', 'Barbería 7E', 'Concepción');
+        $this->queue()->work();
+        $this->queue()->choose($job['id'], 0);
+        $this->queue()->work();
+
+        $this->assertSame(
+            "Lunes-Sábado 8am - 7pm\nDomingo 12pm - 6:30pm",
+            $this->queue()->find($job['id'])['campos']['horario']['valor'],
+        );
     }
 
     public function test_google_failure_marks_the_task_as_failed_with_a_clear_message(): void
