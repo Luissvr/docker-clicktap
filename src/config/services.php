@@ -50,6 +50,14 @@ return [
         'dashboard_url' => env('CLOUDFLARE_DASHBOARD_URL'),
     ],
 
+    'openrouter' => [
+        'api_url' => env('OPENROUTER_API_URL', 'https://openrouter.ai/api/v1'),
+        'key' => env('OPENROUTER_API_KEY'),
+        'model' => env('OPENROUTER_MODEL', 'openrouter/free'),
+        'app_url' => env('OPENROUTER_APP_URL', 'https://clicktap.app'),
+        'app_title' => env('OPENROUTER_APP_TITLE', 'ClickTap'),
+    ],
+
     'supabase' => [
         'dashboard_url' => env('SUPABASE_DASHBOARD_URL'),
     ],
