@@ -80,6 +80,24 @@
                             @if ($step['estado'] === 'no_encontrado' && $step['busqueda_manual'])
                                 <a class="ct-research-origin" href="{{ $step['busqueda_manual'] }}" target="_blank" rel="noopener noreferrer">Buscar manualmente en Google</a>
                             @endif
+                            @if ($state === 'lista' && ! empty($job['candidatos_redes'][$step['clave']] ?? []) && ! ($job['campos'][$step['clave']]['verificado'] ?? false))
+                                <span class="ct-research-origin">Posibles perfiles (abre cada uno para comprobar que es el del negocio):</span>
+                                <ul class="ct-research-profiles">
+                                    @foreach ($job['candidatos_redes'][$step['clave']] as $candidateIndex => $profile)
+                                        <li class="ct-research-profile" wire:key="profile-{{ $step['clave'] }}-{{ $candidateIndex }}">
+                                            @if ($profile['imagen'])
+                                                <img src="{{ $profile['imagen'] }}" alt="" referrerpolicy="no-referrer" loading="lazy">
+                                            @endif
+                                            <span class="ct-research-row-body">
+                                                <span class="ct-research-row-title">{{ $profile['titulo'] }}</span>
+                                                @if ($profile['descripcion'])<span class="ct-research-origin">{{ $profile['descripcion'] }}</span>@endif
+                                                <a class="ct-research-origin" href="{{ $profile['url'] }}" target="_blank" rel="noopener noreferrer">{{ $profile['url'] }}</a>
+                                            </span>
+                                            <button type="button" class="ct-research-button is-secondary" wire:click="useSocialCandidate('{{ $step['clave'] }}', {{ $candidateIndex }})">Usar este</button>
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            @endif
                             @if ($state === 'lista' && in_array($step['clave'], ['instagram', 'facebook', 'tiktok'], true) && in_array($step['estado'], ['no_encontrado', 'error'], true))
                                 <span class="ct-research-manual">
                                     <input type="text" autocomplete="off" maxlength="300" placeholder="Pega el enlace del perfil o su @usuario" aria-label="Perfil de {{ $step['etiqueta'] }}" wire:model="researchManual.{{ $step['clave'] }}" wire:keydown.enter.prevent="useManualProfile('{{ $step['clave'] }}')">
@@ -125,6 +143,7 @@
                                     'busqueda_web' => 'Encontrado por búsqueda web',
                                     'telefono_movil' => 'Deducido del teléfono móvil',
                                     'manual' => 'Ingresado por ti',
+                                    'confirmado' => 'Confirmado por ti entre los resultados de búsqueda',
                                     default => $data['origen'],
                                 } }}</span>
                             </span>

@@ -169,6 +169,20 @@ trait ResearchesBusiness
         $this->researchSelected[$network] = true;
     }
 
+    public function useSocialCandidate(string $network, int $index): void
+    {
+        $job = $this->researchJob();
+        $candidate = $job['candidatos_redes'][$network][$index] ?? null;
+        if ($job === null || $job['estado'] !== 'lista' || $candidate === null) {
+            return;
+        }
+
+        app(BusinessResearchQueue::class)->setManualProfile($job['id'], $network, $candidate['url'], 'confirmado');
+        unset($this->researchManualErrors[$network], $this->researchManual[$network]);
+        $this->researchFilled[$network] = $this->researchFieldHasValue($network);
+        $this->researchSelected[$network] = true;
+    }
+
     public function cancelResearch(): void
     {
         if ($this->researchJobId !== null) {

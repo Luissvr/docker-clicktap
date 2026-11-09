@@ -358,4 +358,59 @@ class BusinessResearchQueueTest extends TestCase
         $this->assertStringContainsString('no está configurada', $instagram['detalle']);
         Http::assertNotSent(fn (Request $request): bool => str_contains($request->url(), 'brave'));
     }
+
+    private function investigateWebsiteWithBrave(string $websiteHtml, array $braveResponses = []): array
+    {
+        config([
+            'services.brave.key' => 'brave-key',
+            'services.brave.api_url' => 'https://brave.test/res/v1/web/search',
+        ]);
+        Http::fake([
+            'maps.google.com/*' => Http::response(self::embed([$this->place()])),
+            'brave.test/*' => fn (Request $request) => $braveResponses[$this->networkOf($this->braveQuery($request))] ?? Http::response(['web' => ['results' => []]]),
+            '*negocio.example*' => Http::response($websiteHtml, 200, ['Content-Type' => 'text/html']),
+        ]);
+
+        $job = $this->queue()->start('user-1', 'Barbería 7E', 'Concepción');
+        $this->queue()->work();
+        $this->queue()->choose($job['id'], 0);
+        $this->queue()->work();
+
+        return $this->queue()->find($job['id']);
+    }
+
+    public function test_links_to_the_website_template_author_are_discarded_and_the_real_profiles_are_searched(): void
+    {
+        $job = $this->investigateWebsiteWithBrave(
+            '<html><body><a href="https://www.facebook.com/AncoraThemes">Tema</a><a href="https://www.instagram.com/ancora_themes/">Tema</a><a href="https://wa.me/53715371">WA</a></body></html>',
+            ['instagram' => Http::response(['web' => ['results' => [
+                ['url' => 'https://www.instagram.com/barberia7e/', 'title' => 'Barbería 7E (@barberia7e) • Instagram', 'description' => 'Cortes y barba en Concepción', 'thumbnail' => ['src' => 'https://imgs.search.brave.com/foto.jpg']],
+                ['url' => 'https://www.instagram.com/barberia7e.sur/', 'title' => 'Barbería 7E Sur (@barberia7e.sur)', 'description' => ''],
+            ]]])],
+        );
+
+        $fields = $job['campos'];
+        $this->assertSame('https://instagram.com/barberia7e', $fields['instagram']['valor']);
+        $this->assertFalse($fields['instagram']['verificado']);
+        $this->assertArrayNotHasKey('facebook', $fields);
+        $this->assertArrayNotHasKey('whatsapp', $fields);
+        $this->assertCount(3, array_filter($job['descartados'], fn (string $text): bool => str_contains($text, 'descartado')));
+
+        $candidates = $job['candidatos_redes']['instagram'];
+        $this->assertCount(2, $candidates);
+        $this->assertSame('https://imgs.search.brave.com/foto.jpg', $candidates[0]['imagen']);
+        $this->assertSame('Cortes y barba en Concepción', $candidates[0]['descripcion']);
+        $this->assertNull($candidates[1]['imagen']);
+    }
+
+    public function test_a_website_profile_that_does_not_resemble_the_business_is_only_a_suggestion(): void
+    {
+        $job = $this->investigateWebsiteWithBrave('<html><body><a href="https://www.instagram.com/otracosa/">IG</a><a href="https://www.tiktok.com/@barberiasiete">TikTok</a></body></html>');
+
+        $this->assertFalse($job['campos']['instagram']['verificado']);
+        $this->assertTrue($job['campos']['tiktok']['verificado']);
+        $steps = collect($job['pasos'])->keyBy('clave');
+        $this->assertSame('encontrado', $steps['instagram']['estado']);
+        $this->assertStringContainsString('no se parece al nombre', $steps['instagram']['detalle']);
+    }
 }

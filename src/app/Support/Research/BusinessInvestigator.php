@@ -50,6 +50,7 @@ class BusinessInvestigator
         $job['campos'] = [];
         $job['pendientes'] = ['Confirmar los datos y el logo con el encargado antes de publicar.'];
         $job['descartados'] = [];
+        $job['candidatos_redes'] = [];
 
         $run = function (string $key, Closure $callback) use (&$job, $save): void {
             $this->setStep($job, $key, 'en_curso', null);
@@ -131,6 +132,7 @@ class BusinessInvestigator
             $added++;
         }
         $job['descartados'] = [...$job['descartados'], ...$result['descartados']];
+        $this->reviewWebsiteLinks($job, (string) $candidate['name']);
         if ($result['ia_error'] !== null) {
             $job['pendientes'][] = 'La IA no se pudo usar al leer la web: '.$result['ia_error'];
         }
@@ -148,9 +150,11 @@ class BusinessInvestigator
     private function fromSocialNetwork(array &$job, array $candidate, string $network): array
     {
         $label = self::STEPS[$network];
-        if (isset($job['campos'][$network])) {
-            return ['encontrado', 'Obtenido de '.($job['campos'][$network]['origen'] === 'google' ? 'la ficha de Google' : 'la web del negocio')];
+        $existing = $job['campos'][$network] ?? null;
+        if ($existing !== null && $existing['verificado']) {
+            return ['encontrado', 'Obtenido de '.($existing['origen'] === 'google' ? 'la ficha de Google' : ($existing['origen'] === 'manual' ? 'lo que ingresaste' : 'la web del negocio'))];
         }
+        $unverified = 'Sugerido: el enlace que aparece en la web no se parece al nombre del negocio; confirma que es suyo';
 
         $manual = 'https://www.google.com/search?'.http_build_query([
             'q' => '"'.$candidate['name'].'" '.Str::before((string) ($candidate['address'] ?? ''), ',').' '.$network,
@@ -160,17 +164,50 @@ class BusinessInvestigator
         if ($this->socialSearch->enabled()) {
             $found = $this->webSearchProfiles($job, $candidate);
             if (isset($found[$network])) {
+                $job['candidatos_redes'][$network] = $found[$network]['candidatos'];
                 $this->setField($job, $network, $found[$network]['url'], false, 'busqueda_web', $found[$network]['url']);
 
-                return ['encontrado', 'Sugerido por Brave Search: «'.$found[$network]['titulo'].'». Confirma que es el mismo negocio'];
+                return ['encontrado', 'Sugerido por Brave Search: «'.$found[$network]['titulo'].'». Revisa la vista previa y confirma que es el mismo negocio'];
             }
-            if (isset($job['busqueda_web_error'])) {
+            if ($existing === null && isset($job['busqueda_web_error'])) {
                 return ['error', $job['busqueda_web_error']];
             }
+        }
+        if ($existing !== null) {
+            return ['encontrado', $unverified];
         }
 
         return ['no_encontrado', 'No apareció '.$label.' en la ficha ni en la web'
             .($this->socialSearch->enabled() ? ' ni en Brave Search' : ' (la búsqueda web de redes no está configurada)')];
+    }
+
+    /**
+     * Lo que enlaza la web no siempre es del negocio: descarta los créditos de plantillas, rebaja a «Sugerido» las redes
+     * que no se parecen al nombre y descarta WhatsApp que no sean un móvil chileno.
+     *
+     * @param  array<string, mixed>  $job
+     */
+    private function reviewWebsiteLinks(array &$job, string $businessName): void
+    {
+        foreach (['instagram', 'facebook', 'tiktok'] as $network) {
+            $field = $job['campos'][$network] ?? null;
+            if ($field === null || ! in_array($field['origen'], ['pagina', 'ia'], true)) {
+                continue;
+            }
+            if ($this->socialSearch->isThirdPartyProfile($field['valor'])) {
+                unset($job['campos'][$network]);
+                $job['descartados'][] = self::STEPS[$network].' de la web descartado: '.$field['valor'].' pertenece al proveedor de la plantilla, no al negocio';
+            } elseif (! $this->socialSearch->resemblesBusiness($businessName, $field['valor'])) {
+                $job['campos'][$network]['verificado'] = false;
+            }
+        }
+
+        $whatsapp = $job['campos']['whatsapp'] ?? null;
+        if ($whatsapp !== null && in_array($whatsapp['origen'], ['pagina', 'ia'], true)
+            && preg_match('/^569\d{8}$/', (string) preg_replace('/\D/', '', $whatsapp['valor'])) !== 1) {
+            unset($job['campos']['whatsapp']);
+            $job['descartados'][] = 'WhatsApp de la web descartado: '.$whatsapp['valor'].' no es un móvil chileno (+56 9 y 8 dígitos)';
+        }
     }
 
     /**
@@ -186,7 +223,7 @@ class BusinessInvestigator
             return $job['busqueda_web'];
         }
 
-        $missing = array_values(array_filter(['instagram', 'facebook', 'tiktok'], fn (string $network): bool => ! isset($job['campos'][$network])));
+        $missing = array_values(array_filter(['instagram', 'facebook', 'tiktok'], fn (string $network): bool => ! ($job['campos'][$network]['verificado'] ?? false)));
         try {
             $job['busqueda_web'] = $this->socialSearch->find((string) $candidate['name'], (string) $job['ciudad'], $missing);
         } catch (BusinessResearchException $exception) {

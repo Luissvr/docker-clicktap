@@ -364,4 +364,46 @@ class BusinessResearchPanelTest extends TestCase
         $this->expectException(CannotUpdateLockedPropertyException::class);
         Livewire::test(CreatePagina::class)->set('researchJobId', 'otra-busqueda');
     }
+
+    public function test_search_results_are_offered_with_a_preview_and_can_be_confirmed(): void
+    {
+        config([
+            'services.brave.key' => 'brave-key', 'services.brave.delay_ms' => 0,
+            'services.brave.api_url' => 'https://brave.test/res/v1/web/search',
+        ]);
+        Http::swap(new HttpFactory);
+        Http::fake([
+            'maps.google.com/*' => Http::response(BusinessResearchQueueTest::embed([[
+                'name' => 'Barbería 7E', 'address' => 'Ejército 1282, Concepción, Bío Bío', 'place_id' => 'ChIJOtraSucursal1234567890',
+            ]])),
+            'brave.test/*' => Http::response(['web' => ['results' => [[
+                'url' => 'https://www.instagram.com/barberia7e/', 'title' => 'Barbería 7E (@barberia7e) • Instagram',
+                'description' => 'Cortes y barba en Concepción', 'thumbnail' => ['src' => 'https://imgs.search.brave.com/foto.jpg'],
+            ]]]]),
+        ]);
+        $this->actAsAdministrator();
+
+        $component = Livewire::test(CreatePagina::class)
+            ->set('researchName', 'Barbería 7E')
+            ->call('startResearch');
+        $this->runWorker();
+        $component->call('chooseResearchCandidate', 0);
+        $this->runWorker();
+        $component->call('refreshResearch')
+            ->assertSee('Posibles perfiles')
+            ->assertSee('Cortes y barba en Concepción')
+            ->assertSeeHtml('src="https://imgs.search.brave.com/foto.jpg"')
+            ->assertSeeHtml('wire:click="useSocialCandidate(\'instagram\', 0)"')
+            ->assertSet('researchSelected.instagram', false)
+            ->call('useSocialCandidate', 'instagram', 9)
+            ->assertSet('researchSelected.instagram', false)
+            ->call('useSocialCandidate', 'instagram', 0)
+            ->assertSet('researchSelected.instagram', true)
+            ->assertSee('Confirmado por ti')
+            ->assertDontSee('Posibles perfiles')
+            ->call('applyResearch');
+
+        $links = collect($component->get('data.enlaces'))->mapWithKeys(fn (array $link): array => [$link['tipo'] => $link['url'] ?? null]);
+        $this->assertSame('https://instagram.com/barberia7e', $links['instagram']);
+    }
 }

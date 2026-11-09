@@ -22,6 +22,15 @@ class SocialProfileSearch
         'tiktok' => ['discover', 'tag', 'video', 'music', 'search', 'live', 'foryou', 'explore'],
     ];
 
+    /** Perfiles de proveedores de plantillas y constructores web cuyos créditos suelen aparecer en el pie de página. */
+    private const THIRD_PARTY_HANDLES = [
+        'ancorathemes', 'ancora_themes', 'themeforest', 'envato', 'elementor', 'wix', 'wordpress', 'wpengine', 'squarespace',
+        'shopify', 'godaddy', 'weebly', 'webflow', 'themerex', 'themefusion', 'themeisle', 'wpbakery', 'divi', 'elegantthemes',
+        'jimdo', 'hostinger', 'tiendanube', 'canva', 'facebook', 'instagram', 'tiktok', 'meta',
+    ];
+
+    private const MAX_CANDIDATES = 3;
+
     private const STOP_WORDS = ['la', 'el', 'los', 'las', 'de', 'del', 'y', 'e', 'en', 'the', 'and', 'spa', 'local'];
 
     public function __construct(private WebsitePageReader $reader) {}
@@ -33,7 +42,7 @@ class SocialProfileSearch
 
     /**
      * @param  list<string>  $networks
-     * @return array<string, array{url: string, titulo: string}> red => perfil sugerido
+     * @return array<string, array{url: string, titulo: string, descripcion: string, imagen: ?string, candidatos: list<array{url: string, titulo: string, descripcion: string, imagen: ?string}>}> red => mejor perfil y alternativas
      */
     public function find(string $businessName, string $city, array $networks): array
     {
@@ -50,14 +59,14 @@ class SocialProfileSearch
             }
 
             try {
-                $profile = $this->searchNetwork($businessName, $city, $network);
+                $profiles = $this->searchNetwork($businessName, $city, $network);
             } catch (BusinessResearchException $exception) {
                 $errors[] = $exception->getMessage();
 
                 continue;
             }
-            if ($profile !== null) {
-                $found[$network] = $profile;
+            if ($profiles !== []) {
+                $found[$network] = [...$profiles[0], 'candidatos' => $profiles];
             }
         }
 
@@ -69,7 +78,7 @@ class SocialProfileSearch
     }
 
     /**
-     * @return array{url: string, titulo: string}|null
+     * @return list<array{url: string, titulo: string, descripcion: string, imagen: ?string}>
      */
     private function searchNetwork(string $businessName, string $city, string $network): ?array
     {
@@ -100,6 +109,7 @@ class SocialProfileSearch
             });
         }
 
+        $profiles = [];
         foreach ((array) $response->json('web.results', []) as $result) {
             $url = is_array($result) ? ($result['url'] ?? null) : null;
             if (! is_string($url) || ! $this->isProfileUrl($url, $network)) {
@@ -112,10 +122,56 @@ class SocialProfileSearch
                 continue;
             }
 
-            return ['url' => $this->reader->normalizeSocialUrl($url), 'titulo' => Str::limit($title, 120, '…')];
+            $normalized = $this->reader->normalizeSocialUrl($url);
+            if (in_array($normalized, array_column($profiles, 'url'), true)) {
+                continue;
+            }
+            $image = $result['thumbnail']['src'] ?? null;
+            $profiles[] = [
+                'url' => $normalized,
+                'titulo' => Str::limit($title, 120, '…'),
+                'descripcion' => Str::limit(trim((string) preg_replace('/\s+/u', ' ', html_entity_decode(strip_tags((string) ($result['description'] ?? ''))))), 200, '…'),
+                'imagen' => is_string($image) && str_starts_with($image, 'https://') ? $image : null,
+            ];
+            if (count($profiles) >= self::MAX_CANDIDATES) {
+                break;
+            }
         }
 
-        return null;
+        return $profiles;
+    }
+
+    /**
+     * El perfil pertenece al proveedor de la plantilla o a la propia red, no al negocio.
+     */
+    public function isThirdPartyProfile(string $url): bool
+    {
+        $segments = explode('/', trim((string) parse_url($url, PHP_URL_PATH), '/'));
+        $handle = strtolower(ltrim($segments[0] ?? '', '@'));
+
+        return $handle !== '' && in_array($handle, self::THIRD_PARTY_HANDLES, true);
+    }
+
+    /**
+     * El usuario del perfil se parece al nombre del negocio (contiene una palabra distintiva o está contenido en él).
+     */
+    public function resemblesBusiness(string $businessName, string $url): bool
+    {
+        $segments = explode('/', trim((string) parse_url($url, PHP_URL_PATH), '/'));
+        $handle = (string) preg_replace('/[^a-z0-9]/', '', strtolower(Str::ascii(ltrim($segments[0] ?? '', '@'))));
+        if ($handle === '') {
+            return false;
+        }
+
+        $name = $this->normalize($businessName);
+        $tokens = array_values(array_filter(explode(' ', $name), fn (string $token): bool => strlen($token) >= 4 && ! in_array($token, self::STOP_WORDS, true)));
+        foreach ($tokens as $token) {
+            if (str_contains($handle, $token)) {
+                return true;
+            }
+        }
+
+        return strlen($handle) >= 4 && str_contains(str_replace(' ', '', $name), $handle);
     }
 
     private function isProfileUrl(string $url, string $network): bool
