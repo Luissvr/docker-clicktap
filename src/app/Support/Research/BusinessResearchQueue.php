@@ -74,6 +74,29 @@ class BusinessResearchQueue
         return $job;
     }
 
+    /**
+     * Registra un perfil social que el administrador encontró y pegó a mano.
+     */
+    public function setManualProfile(string $jobId, string $network, string $url): bool
+    {
+        $job = $this->find($jobId);
+        if ($job === null || $job['estado'] !== 'lista' || ! in_array($network, ['instagram', 'facebook', 'tiktok'], true)) {
+            return false;
+        }
+
+        $job['campos'][$network] = ['valor' => $url, 'verificado' => true, 'origen' => 'manual', 'fuente' => $url];
+        foreach ($job['pasos'] as &$step) {
+            if ($step['clave'] === $network) {
+                $step['estado'] = 'encontrado';
+                $step['detalle'] = 'Ingresado manualmente por ti';
+            }
+        }
+        unset($step);
+        $this->save($job);
+
+        return true;
+    }
+
     public function cancel(string $jobId): void
     {
         $job = $this->find($jobId);

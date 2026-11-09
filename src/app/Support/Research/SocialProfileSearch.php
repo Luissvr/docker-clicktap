@@ -18,7 +18,7 @@ class SocialProfileSearch
 
     private const IGNORED_PATHS = [
         'instagram' => ['p', 'reel', 'reels', 'explore', 'stories', 'tv', 'accounts', 'directory', 'popular', 'about', 'legal', 'developer'],
-        'facebook' => ['sharer', 'sharer.php', 'share', 'groups', 'events', 'watch', 'marketplace', 'posts', 'photo', 'photos', 'videos', 'reel', 'reels', 'hashtag', 'login', 'public', 'policies', 'help', 'story.php', 'permalink.php'],
+        'facebook' => ['sharer', 'sharer.php', 'share', 'groups', 'events', 'watch', 'marketplace', 'posts', 'photo', 'photos', 'videos', 'reel', 'reels', 'hashtag', 'login', 'public', 'policies', 'help', 'story.php', 'permalink.php', 'profile.php'],
         'tiktok' => ['discover', 'tag', 'video', 'music', 'search', 'live', 'foryou', 'explore'],
     ];
 
@@ -133,8 +133,42 @@ class SocialProfileSearch
         return match ($network) {
             'instagram' => count($segments) === 1,
             'tiktok' => count($segments) === 1 && str_starts_with($segments[0], '@'),
-            'facebook' => count($segments) === 1 || (strtolower($segments[0]) === 'pages' && count($segments) >= 2),
+            'facebook' => count($segments) === 1
+                || (strtolower($segments[0]) === 'pages' && count($segments) >= 2)
+                || (strtolower($segments[0]) === 'people' && count($segments) >= 3),
         };
+    }
+
+    /**
+     * Valida un enlace o @usuario pegado por el administrador y lo devuelve como URL de perfil normalizada,
+     * o null si no es el perfil de esa red (publicaciones, otras redes, texto suelto).
+     */
+    public function profileUrl(string $input, string $network): ?string
+    {
+        $input = trim($input);
+        if (! isset(self::NETWORKS[$network]) || $input === '' || mb_strlen($input) > 300 || preg_match('/\s/', $input)) {
+            return null;
+        }
+
+        $isLink = str_contains($input, '/') || preg_match('/(?:instagram|facebook|fb|tiktok)\.com/i', $input) === 1;
+        if (! $isLink) {
+            if (preg_match('/^@?([A-Za-z0-9._]{2,60})$/', $input, $match) !== 1) {
+                return null;
+            }
+            $input = match ($network) {
+                'instagram' => 'https://instagram.com/'.$match[1],
+                'tiktok' => 'https://tiktok.com/@'.$match[1],
+                'facebook' => 'https://facebook.com/'.$match[1],
+            };
+        } elseif (preg_match('#^https?://#i', $input) !== 1) {
+            $input = 'https://'.$input;
+        }
+
+        if (filter_var($input, FILTER_VALIDATE_URL) === false || ! $this->isProfileUrl($input, $network)) {
+            return null;
+        }
+
+        return $this->reader->normalizeSocialUrl($input);
     }
 
     private function mentionsBusiness(string $businessName, string $text): bool

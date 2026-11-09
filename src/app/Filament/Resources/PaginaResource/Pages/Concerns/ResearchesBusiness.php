@@ -4,6 +4,7 @@ namespace App\Filament\Resources\PaginaResource\Pages\Concerns;
 
 use App\Support\LinkTypeHelper;
 use App\Support\Research\BusinessResearchQueue;
+use App\Support\Research\SocialProfileSearch;
 use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
@@ -60,6 +61,12 @@ trait ResearchesBusiness
     public bool $researchSelectionReady = false;
 
     public ?string $researchError = null;
+
+    /** @var array<string, string> */
+    public array $researchManual = [];
+
+    /** @var array<string, string> */
+    public array $researchManualErrors = [];
 
     public function mountResearchesBusiness(): void
     {
@@ -132,6 +139,30 @@ trait ResearchesBusiness
         $this->researchSelectionReady = true;
     }
 
+    public function useManualProfile(string $network): void
+    {
+        $job = $this->researchJob();
+        if ($job === null || $job['estado'] !== 'lista' || ! in_array($network, ['instagram', 'facebook', 'tiktok'], true)) {
+            return;
+        }
+
+        $url = app(SocialProfileSearch::class)->profileUrl((string) ($this->researchManual[$network] ?? ''), $network);
+        if ($url === null) {
+            $this->researchManualErrors[$network] = 'Eso no parece el perfil de '.self::RESEARCH_FIELD_LABELS[$network].'. Pega la dirección del perfil (por ejemplo '.match ($network) {
+                'instagram' => 'instagram.com/usuario',
+                'facebook' => 'facebook.com/pagina',
+                'tiktok' => 'tiktok.com/@usuario',
+            }.') o su @usuario; no sirven las publicaciones.';
+
+            return;
+        }
+
+        app(BusinessResearchQueue::class)->setManualProfile($job['id'], $network, $url);
+        unset($this->researchManualErrors[$network], $this->researchManual[$network]);
+        $this->researchFilled[$network] = $this->researchFieldHasValue($network);
+        $this->researchSelected[$network] = true;
+    }
+
     public function cancelResearch(): void
     {
         if ($this->researchJobId !== null) {
@@ -195,6 +226,8 @@ trait ResearchesBusiness
         $this->researchFilled = [];
         $this->researchSelectionReady = false;
         $this->researchError = null;
+        $this->researchManual = [];
+        $this->researchManualErrors = [];
     }
 
     private function applyResearchName(string $name): void

@@ -12,6 +12,7 @@ use Illuminate\Http\Client\Factory as HttpFactory;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\RateLimiter;
 use Livewire\Features\SupportLockedProperties\CannotUpdateLockedPropertyException;
+use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -139,6 +140,88 @@ class BusinessResearchPanelTest extends TestCase
         $this->assertSame('https://instagram.com/barberiasiete', $links['instagram']);
         $this->assertSame('https://wa.me/56987654321', $links['whatsapp']);
         $this->assertSame('https://negocio.example', $links['web']);
+    }
+
+    private function researchWithoutSocialProfiles(): Testable
+    {
+        $component = Livewire::test(CreatePagina::class)
+            ->set('researchName', 'Barbería 7E')
+            ->call('startResearch');
+        $this->runWorker();
+        $component->call('chooseResearchCandidate', 1);
+        $this->runWorker();
+
+        return $component->call('refreshResearch');
+    }
+
+    public function test_a_missing_network_offers_a_field_to_paste_the_profile(): void
+    {
+        $this->actAsAdministrator();
+
+        $this->researchWithoutSocialProfiles()
+            ->assertSee('Pega el enlace del perfil o su @usuario')
+            ->assertSeeHtml('wire:click="useManualProfile(\'instagram\')"')
+            ->assertSeeHtml('wire:click="useManualProfile(\'tiktok\')"');
+    }
+
+    public function test_a_pasted_profile_is_validated_saved_and_applied_to_the_form(): void
+    {
+        $this->actAsAdministrator();
+
+        $component = $this->researchWithoutSocialProfiles()
+            ->set('researchManual.instagram', 'https://www.instagram.com/7ebarber.shop/?hl=es')
+            ->call('useManualProfile', 'instagram')
+            ->assertSet('researchManualErrors', [])
+            ->assertSet('researchSelected.instagram', true)
+            ->assertSee('Ingresado por ti')
+            ->assertSee('Ingresado manualmente por ti')
+            ->call('applyResearch');
+
+        $links = collect($component->get('data.enlaces'))->mapWithKeys(fn (array $link): array => [$link['tipo'] => $link['url'] ?? null]);
+        $this->assertSame('https://instagram.com/7ebarber.shop', $links['instagram']);
+    }
+
+    public function test_a_username_alone_is_enough(): void
+    {
+        $this->actAsAdministrator();
+
+        $component = $this->researchWithoutSocialProfiles()
+            ->set('researchManual.tiktok', '@7ebarber')
+            ->call('useManualProfile', 'tiktok')
+            ->call('applyResearch');
+
+        $links = collect($component->get('data.enlaces'))->mapWithKeys(fn (array $link): array => [$link['tipo'] => $link['url'] ?? null]);
+        $this->assertSame('https://tiktok.com/@7ebarber', $links['tiktok']);
+    }
+
+    public function test_a_post_or_another_network_is_rejected_with_a_clear_message(): void
+    {
+        $this->actAsAdministrator();
+
+        $component = $this->researchWithoutSocialProfiles()
+            ->set('researchManual.instagram', 'https://www.instagram.com/p/ABC123/')
+            ->call('useManualProfile', 'instagram')
+            ->assertSee('Eso no parece el perfil de Enlace de Instagram')
+            ->assertSet('researchSelected.instagram', null);
+
+        $component->set('researchManual.instagram', 'https://www.facebook.com/7ebarber')
+            ->call('useManualProfile', 'instagram')
+            ->assertSet('researchSelected.instagram', null);
+        $this->assertArrayNotHasKey('instagram', app(BusinessResearchQueue::class)->find($component->get('researchJobId'))['campos']);
+    }
+
+    public function test_the_paste_field_is_not_offered_for_other_steps_or_unknown_networks(): void
+    {
+        $this->actAsAdministrator();
+
+        $component = $this->researchWithoutSocialProfiles()
+            ->set('researchManual.whatsapp', '@7ebarber')
+            ->call('useManualProfile', 'whatsapp');
+
+        $this->assertArrayNotHasKey('whatsapp', array_filter(
+            app(BusinessResearchQueue::class)->find($component->get('researchJobId'))['campos'],
+            fn (array $field): bool => $field['origen'] === 'manual',
+        ));
     }
 
     public function test_existing_values_are_kept_unless_the_user_selects_them(): void

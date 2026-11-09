@@ -80,6 +80,15 @@
                             @if ($step['estado'] === 'no_encontrado' && $step['busqueda_manual'])
                                 <a class="ct-research-origin" href="{{ $step['busqueda_manual'] }}" target="_blank" rel="noopener noreferrer">Buscar manualmente en Google</a>
                             @endif
+                            @if ($state === 'lista' && in_array($step['clave'], ['instagram', 'facebook', 'tiktok'], true) && in_array($step['estado'], ['no_encontrado', 'error'], true))
+                                <span class="ct-research-manual">
+                                    <input type="text" autocomplete="off" maxlength="300" placeholder="Pega el enlace del perfil o su @usuario" aria-label="Perfil de {{ $step['etiqueta'] }}" wire:model="researchManual.{{ $step['clave'] }}" wire:keydown.enter.prevent="useManualProfile('{{ $step['clave'] }}')">
+                                    <button type="button" class="ct-research-button is-secondary" wire:click="useManualProfile('{{ $step['clave'] }}')">Usar</button>
+                                </span>
+                                @if (! empty($livewire->researchManualErrors[$step['clave']]))
+                                    <span class="ct-research-origin" role="alert" style="color: #7a271a;">{{ $livewire->researchManualErrors[$step['clave']] }}</span>
+                                @endif
+                            @endif
                         </span>
                     </li>
                 @endforeach
@@ -112,6 +121,7 @@
                                     'ia' => 'Ordenado con IA y comprobado en la web del negocio',
                                     'busqueda_web' => 'Encontrado por búsqueda web',
                                     'telefono_movil' => 'Deducido del teléfono móvil',
+                                    'manual' => 'Ingresado por ti',
                                     default => $data['origen'],
                                 } }}</span>
                             </span>

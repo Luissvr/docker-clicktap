@@ -1016,3 +1016,6 @@ nav.fi-sidebar-nav {
 .ct-research-step.is-encontrado .ct-research-step-icon { background: #dff7c4; color: #234200; }
 .ct-research-step.is-en_curso .ct-research-step-icon { background: #edf3ff; color: #1e40af; }
 .ct-research-step.is-error .ct-research-step-icon { background: #fef3f2; color: #7a271a; }
+.ct-research-manual { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin-top: .375rem; }
+.ct-research-manual input { flex: 1 1 14rem; min-height: 44px; min-width: 0; padding: .5rem .75rem; border: 1px solid #aab5a1; border-radius: .5rem; background: #fff; }
+.ct-research-manual input:focus-visible { outline: 2px solid #375500; outline-offset: 1px; }
