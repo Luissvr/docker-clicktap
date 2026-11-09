@@ -8,4 +8,7 @@ return [
     'performance_logging' => env('CLICKTAP_PERFORMANCE_LOGGING', false),
     'publication_slugs' => null,
     'sync_interval_seconds' => 1200,
+    'research' => [
+        'default_city' => env('CLICKTAP_RESEARCH_CITY', 'Concepción'),
+    ],
 ];

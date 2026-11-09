@@ -38,6 +38,29 @@ final class ProspectMapResearch
         return ['status' => 'matched', 'place' => $matched[0]];
     }
 
+    /**
+     * Devuelve todos los negocios que Google incluye en una ficha embebida, sin repetir.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function candidates(string $html): array
+    {
+        if (! preg_match('/initEmbed\((\[.*?\])\);/s', $html, $matches)) {
+            return [];
+        }
+
+        $payload = json_decode($matches[1], true);
+        $places = [];
+        $this->collectPlaces(is_array($payload) ? $payload : [], $places);
+
+        $unique = [];
+        foreach ($places as $place) {
+            $unique[$place['place_id']] ??= $place;
+        }
+
+        return array_values($unique);
+    }
+
     /** @param array<mixed> $node
      * @param  list<array<string, mixed>>  $places
      */

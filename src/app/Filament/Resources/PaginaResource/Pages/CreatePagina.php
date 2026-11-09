@@ -7,6 +7,7 @@ use App\Filament\Pages\Ventas;
 use App\Filament\Resources\PaginaResource;
 use App\Filament\Resources\PaginaResource\Pages\Concerns\LoadsPagePreview;
 use App\Filament\Resources\PaginaResource\Pages\Concerns\OrdersPageLinks;
+use App\Filament\Resources\PaginaResource\Pages\Concerns\ResearchesBusiness;
 use App\Models\LocalNegocio;
 use App\Support\BusinessLedger;
 use App\Support\PageSaleSnapshot;
@@ -19,6 +20,7 @@ class CreatePagina extends CreateRecord
 {
     use LoadsPagePreview;
     use OrdersPageLinks;
+    use ResearchesBusiness;
     use UsesCatalogTransactions;
 
     public function create(bool $another = false): void

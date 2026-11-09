@@ -54,8 +54,16 @@ return [
         'api_url' => env('OPENROUTER_API_URL', 'https://openrouter.ai/api/v1'),
         'key' => env('OPENROUTER_API_KEY'),
         'model' => env('OPENROUTER_MODEL', 'openrouter/free'),
+        'timeout' => (int) env('OPENROUTER_TIMEOUT', 60),
         'app_url' => env('OPENROUTER_APP_URL', 'https://clicktap.app'),
         'app_title' => env('OPENROUTER_APP_TITLE', 'ClickTap'),
+    ],
+
+    'brave' => [
+        'api_url' => env('BRAVE_SEARCH_API_URL', 'https://api.search.brave.com/res/v1/web/search'),
+        'key' => env('BRAVE_SEARCH_API_KEY'),
+        'timeout' => (int) env('BRAVE_SEARCH_TIMEOUT', 15),
+        'delay_ms' => (int) env('BRAVE_SEARCH_DELAY_MS', 1100),
     ],
 
     'supabase' => [

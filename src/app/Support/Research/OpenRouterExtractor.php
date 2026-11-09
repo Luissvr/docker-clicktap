@@ -160,7 +160,7 @@ class OpenRouterExtractor
                 ]))
                 ->acceptJson()
                 ->connectTimeout(10)
-                ->timeout(90)
+                ->timeout((int) config('services.openrouter.timeout', 60))
                 ->post(rtrim((string) config('services.openrouter.api_url'), '/').'/chat/completions', $payload);
         } catch (Throwable $exception) {
             throw new BusinessResearchException('No se pudo contactar a OpenRouter: '.class_basename($exception).'.');

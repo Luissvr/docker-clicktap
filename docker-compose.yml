@@ -34,6 +34,14 @@ services:
     depends_on:
       - app
 
+  research-worker:
+    <<: *php-service
+    container_name: clicktap_research_worker
+    user: www-data
+    command: sh -c "until [ -f vendor/autoload.php ]; do sleep 2; done; while true; do php artisan clicktap:research-worker --once; sleep 2; done"
+    depends_on:
+      - app
+
   scheduler:
     <<: *php-service
     container_name: clicktap_scheduler

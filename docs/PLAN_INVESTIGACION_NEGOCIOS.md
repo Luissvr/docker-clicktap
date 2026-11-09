@@ -2,6 +2,25 @@
 
 Fecha: 2026-11-09 (rev.: IA vía OpenRouter en lugar de Claude/Gemini). Estado: propuesta; pendiente de decisiones D2–D6 (§3). Prototipo de lectura web + extractor: comando `clicktap:research-website`.
 
+## 0. Estado de implementación (2026-11-09)
+
+Flujo ya construido y probado (cola + worker + interfaz en «Crear página»):
+
+1. El administrador escribe **nombre y ciudad** y pulsa *Buscar*; se crea una tarea y el `research-worker` consulta Google Maps (sin clave; mismo origen que `ProspectMapResearch`).
+2. La pantalla lista **todos los negocios con ese nombre** (nombre, dirección, categoría, valoración, enlace a Maps) y el administrador elige **«Es este»**.
+3. En segundo plano se investiga cada enlace y la pantalla muestra el avance por paso: ficha de Google (dirección, teléfono, horario, reseñas con `place_id`, mapa) → web del negocio (extractor con OpenRouter opcional) → Instagram → Facebook → TikTok → WhatsApp.
+4. Los datos aparecen con marca Verificado/Sugerido y su origen; el administrador marca los que quiere y pulsa *Aplicar*; la página se guarda como borrador.
+
+Piezas: `BusinessResearchQueue`, `GoogleMapsCandidateSearch`, `BusinessInvestigator`, `SocialProfileSearch` (Brave Search, activo solo con `BRAVE_SEARCH_API_KEY`), `RunResearchWorker` + servicio `research-worker` en `docker-compose.yml`, `ResearchesBusiness` (Livewire) y `business-research.blade.php`. La cola usa el almacén de caché de publicaciones (sin migraciones).
+
+Diferencias con el diseño de abajo: no usa Google Places ni tabla `investigaciones_negocio` todavía (decisiones D2/D5); el botón de lotes de ruta (fase 5) sigue pendiente. Limitación y solución para las redes: la ficha de Google Maps no trae redes sociales, así que Instagram/Facebook/TikTok solo se obtienen si el negocio las puso como su «sitio web» en Google o las enlaza su web. **No se lee el buscador normal de Google** (ni DuckDuckGo/Bing): hacerlo imitando un navegador es saltarse sus controles contra robots. Para el resto se usa la **API oficial de Brave Search** (`SocialProfileSearch`): una consulta por red con `site:instagram.com|facebook.com|tiktok.com "nombre" ciudad`; solo se acepta un resultado que sea realmente un perfil (no una publicación ni un reel) y cuyo título, descripción o ruta mencione el nombre del negocio, y se muestra siempre como «Sugerido» con el título del resultado. Se activa poniendo `BRAVE_SEARCH_API_KEY` en `src/.env`; sin clave el paso explica que la búsqueda no está configurada y ofrece un enlace de búsqueda manual en Google. Brave: endpoint `GET https://api.search.brave.com/res/v1/web/search`, cabecera `X-Subscription-Token`, ≈ USD 5 por 1.000 consultas con crédito gratuito mensual (monto vigente por confirmar en su panel); revisar sus términos sobre almacenamiento de resultados. No probada con clave real.
+
+## Resultados de la prueba real con Brave (2026-11-09)
+
+- La clave de Brave funciona. Con «Barbería 7E» (usuario real `7ebarber.shop`) **Brave no devolvió su Instagram, Facebook ni TikTok**: su índice no los tiene, aunque Google sí. El filtro rechazó correctamente locales parecidos (Olimpo, Bear, Alta Barber) en vez de sugerir uno equivocado.
+- Las consultas con comillas devuelven 0 resultados en Brave: se quitaron. Si el nombre exacto no está indexado, no hay resultado; Brave no sustituye a Google para negocios muy pequeños.
+- **Google Maps embebido devuelve un solo candidato** cuando el nombre identifica un lugar concreto (p. ej. «7E Barber Shop») y **cero** cuando es genérico («Barbería», «Farmacia Cruz Verde»). Por eso **no entrega la lista de negocios que se llaman igual**. Para ese requisito hace falta **Google Places API (New) Text Search** (clave + facturación en Google Cloud, decisión D2). Se añadió un reintento sin ciudad cuando la búsqueda con ciudad no devuelve nada.
+
 ## 1. Objetivo
 
 Que el administrador escriba **solo el nombre de un negocio** (opcionalmente la ciudad) **o pegue un enlace** (Instagram, Facebook, TikTok, web, Google Maps) y el sistema encuentre en internet los datos públicos disponibles: dirección, teléfono, WhatsApp, horario, web, redes sociales, `place_id` para reseñas, rubro y logo. Con esos datos se prellena el editor de la página y se guarda como **borrador**.
@@ -53,7 +72,7 @@ clicktap:research-worker ──► BusinessResearchService
                                ├─ GooglePlacesProvider    (candidatos + ficha)
                                ├─ WebsiteMetadataProvider (JSON-LD, og:*, enlaces a redes, logo)
                                ├─ OpenRouterExtractor     (IA: ordena en JSON el texto que descargamos)
-                               ├─ OpenRouterWebSearch     (fase 3: búsqueda web de pago, ~USD 0,005)
+                               ├─ SocialProfileSearch     (Brave Search: perfiles de Instagram/Facebook/TikTok)
                                ├─ BusinessIdentityMatcher (coincidencia nombre/dirección)
                                └─ ResearchResultMerger    (fusiona, puntúa, marca fuentes)
 ```
@@ -71,7 +90,7 @@ clicktap:research-worker ──► BusinessResearchService
 | `app/Support/Research/WebsiteMetadataProvider.php` | Descarga segura de la web del negocio y extracción |
 | `app/Support/Research/SafeHttpFetcher.php` | Protección SSRF, límites de tamaño/tiempo/redirecciones |
 | `app/Support/Research/OpenRouterExtractor.php` | Envía el texto de una página descargada por nosotros y recibe JSON (§8.3) |
-| `app/Support/Research/OpenRouterWebSearch.php` (fase 3) | Búsqueda web vía `openrouter:web_search` para negocios sin ficha ni web |
+| `app/Support/Research/SocialProfileSearch.php` | Búsqueda de perfiles sociales con la API oficial de Brave Search (`site:`), con verificación de que sea un perfil y mencione el negocio |
 | `app/Support/Research/ResearchResultMerger.php` | Fusión por campo, prioridad de fuentes, confianza |
 | `app/Support/Research/BusinessResearchService.php` | Orquesta el flujo y los cambios de estado |
 | `app/Support/Research/ResearchBudget.php` | Topes mensuales/diarios y caché por huella |
@@ -169,7 +188,7 @@ Entrada: `websiteUri` de Places o la URL que pegó el usuario.
 2. Extrae: JSON-LD `schema.org` (`LocalBusiness`, `Organization`: `telephone`, `address`, `openingHours`, `sameAs`, `logo`), `og:title`, `og:description`, `og:image`, `link[rel=icon]`, enlaces `wa.me` / `api.whatsapp.com`, enlaces a instagram/facebook/tiktok.
 3. Normaliza teléfonos chilenos a E.164 y URLs de redes (quitar parámetros de seguimiento; `cleanWebsite` existente).
 
-### 8.3 OpenRouterExtractor (fase 2) y OpenRouterWebSearch (fase 3)
+### 8.3 OpenRouterExtractor (fase 2) y SocialProfileSearch con Brave (fase 3)
 
 Principio: **la IA no busca ni inventa; solo lee y ordena** texto que descargamos nosotros. Así sirve cualquier modelo gratuito y la fuente de cada dato es una URL conocida.
 
@@ -182,17 +201,19 @@ Principio: **la IA no busca ni inventa; solo lee y ordena** texto que descargamo
 - Errores: `{"error":{"code":..., "message":...}}`; 429 (con `X-RateLimit-Reset`) → reintentar más tarde, sin bucles que gasten el cupo diario; 402 → sin saldo.
 - **Privacidad:** algunos endpoints gratuitos pueden guardar o entrenar con lo enviado. Solo se envía contenido público del negocio; nunca datos de clientes, ventas ni usuarios del panel. Revisar openrouter.ai/settings/privacy.
 
-**Búsqueda web (fase 3, costo muy bajo):**
-- Herramienta de servidor `tools: [{type: "openrouter:web_search", parameters: {engine: "exa", max_results: 5}}]` (beta). Costo aprox. por búsqueda: Exa USD 0,007, Perplexity USD 0,005, Parallel desde USD 0,001, más tokens. Requiere créditos.
-- Solo para negocios sin ficha de Google ni web, o con entrada desde Instagram/Facebook/TikTok. Pide **URLs candidatas** (perfil oficial, web); esas URLs se descargan con `SafeHttpFetcher` y pasan por el extractor y la verificación de arriba.
-- Registrar `usage.server_tool_use_details.web_search_requests` en `costo_estimado_usd`.
+**Búsqueda de redes con Brave (fase 3):**
+- `GET https://api.search.brave.com/res/v1/web/search?q=site:instagram.com "Nombre" Ciudad&count=10&country=CL&search_lang=es`, cabecera `X-Subscription-Token: <BRAVE_SEARCH_API_KEY>`. Lee `web.results[].url|title|description`.
+- Una consulta por red que falte (máx. 3 por negocio), con pausa configurable entre consultas (`BRAVE_SEARCH_DELAY_MS`, 1.100 ms por defecto) por el límite de velocidad.
+- Un resultado solo se acepta si la URL es un **perfil** (Instagram `/usuario`, TikTok `/@usuario`, Facebook `/pagina` o `/pages/...`; se descartan `/p/`, `/reel/`, `/explore`, `sharer`, grupos, etc.) y si el nombre del negocio aparece en el título, la descripción o la ruta. Siempre «Sugerido».
+- Errores (401/403 clave inválida, 402 sin crédito, 429 límite) se muestran en el paso de cada red y no detienen la investigación.
+- Pendiente de confirmar con una clave real: crédito gratuito vigente, límite por segundo y términos de almacenamiento.
 
 ### 8.4 InputClassifier
 
 | Entrada | Detección | Siguiente paso |
 |---|---|---|
 | Texto sin URL | `nombre` | Places Text Search |
-| `instagram.com/<handle>` | handle | Búsqueda web (fase 3) por handle → nombre/ciudad → Places |
+| `instagram.com/<handle>` | handle | Brave Search (fase 3) por handle → nombre/ciudad → Places |
 | `facebook.com/<página>` | slug | Igual que Instagram |
 | `tiktok.com/@<handle>` | handle | Igual |
 | `maps.google.*`, `maps.app.goo.gl`, `g.page` | `place_id` o nombre | Resolver redirección (fetcher seguro) → Place Details |
@@ -267,10 +288,10 @@ Para redes sociales **no** se hace scraping autenticado; como mucho se lee `og:t
 
 **Acepta si:** para un negocio con web, las redes enlazadas aparecen como verificadas y el logo se puede aplicar.
 
-### Fase 3 — Búsqueda web (OpenRouter) y entrada desde redes sociales (2–3 días)
+### Fase 3 — Búsqueda de redes con Brave y entrada desde redes sociales (2–3 días)
 
 - [ ] Créditos en OpenRouter y tope de gasto (D3).
-- [ ] `OpenRouterWebSearch` con `openrouter:web_search` que devuelve solo URLs candidatas.
+- [x] `SocialProfileSearch` con Brave Search (implementado 2026-11-09; falta probar con clave real).
 - [ ] Las URLs candidatas pasan por `SafeHttpFetcher` + `OpenRouterExtractor` + verificación.
 - [ ] `InputClassifier` acepta instagram/facebook/tiktok.
 - [ ] Prompt de sistema fijo versionado en `resources/prompts/business-research.md`.
