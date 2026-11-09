@@ -28,6 +28,7 @@ class WebsitePageReader
      *     title: ?string,
      *     description: ?string,
      *     image: ?string,
+     *     logo: ?string,
      *     text: string,
      *     links: list<string>,
      *     social: array<string, string>,
@@ -109,6 +110,7 @@ class WebsitePageReader
             'title' => $this->meta($xpath, 'og:title') ?? $this->nullableText($xpath->query('//title')->item(0)?->textContent),
             'description' => $this->meta($xpath, 'og:description') ?? $this->meta($xpath, 'description'),
             'image' => ($image = $this->meta($xpath, 'og:image')) !== null ? $this->absoluteUrl($url, $image) : null,
+            'logo' => $this->logo($xpath, $url, $jsonLd),
             'text' => mb_substr($text, 0, self::MAX_TEXT_LENGTH),
             'links' => $links,
             'social' => $social,
@@ -189,6 +191,42 @@ class WebsitePageReader
         }
 
         return [$node];
+    }
+
+    /**
+     * Mejor candidato a logo: el declarado en los datos estructurados, luego el ícono táctil y por último la imagen social.
+     *
+     * @param  list<array<string, mixed>>  $jsonLd
+     */
+    private function logo(DOMXPath $xpath, string $url, array $jsonLd): ?string
+    {
+        foreach ($jsonLd as $node) {
+            $logo = $node['logo'] ?? null;
+            $logo = is_array($logo) ? ($logo['url'] ?? $logo['contentUrl'] ?? ($logo[0] ?? null)) : $logo;
+            if (is_string($logo) && ($absolute = $this->absoluteUrl($url, trim($logo))) !== null) {
+                return $absolute;
+            }
+        }
+
+        $best = null;
+        $bestSize = -1;
+        foreach ($xpath->query('//link[@href][contains(translate(@rel, "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz"), "apple-touch-icon")]') as $link) {
+            if (! $link instanceof DOMElement) {
+                continue;
+            }
+            $size = (int) $link->getAttribute('sizes');
+            if ($size > $bestSize) {
+                $bestSize = $size;
+                $best = $link->getAttribute('href');
+            }
+        }
+        if ($best !== null && ($absolute = $this->absoluteUrl($url, trim($best))) !== null) {
+            return $absolute;
+        }
+
+        $image = $this->meta($xpath, 'og:image');
+
+        return $image !== null ? $this->absoluteUrl($url, $image) : null;
     }
 
     private function meta(DOMXPath $xpath, string $name): ?string

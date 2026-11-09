@@ -2,13 +2,18 @@
 
 namespace App\Filament\Resources\PaginaResource\Pages\Concerns;
 
+use App\Exceptions\BusinessResearchException;
 use App\Support\LinkTypeHelper;
+use App\Support\LogoPalette;
+use App\Support\Research\BusinessLogoImporter;
 use App\Support\Research\BusinessResearchQueue;
 use App\Support\Research\SocialProfileSearch;
 use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Locked;
+use Throwable;
 
 /**
  * Busca un negocio por nombre, deja elegir el correcto y vuelca al formulario lo que el worker encuentre.
@@ -22,6 +27,7 @@ trait ResearchesBusiness
         'telefono' => 'Teléfono',
         'horario' => 'Horario',
         'descripcion' => 'Descripción',
+        'logo' => 'Logo del local',
         'resenas' => 'Reseñas de Google (Place ID)',
         'ubicacion' => 'Enlace de ubicación (Google Maps)',
         'whatsapp' => 'Enlace de WhatsApp',
@@ -194,6 +200,10 @@ trait ResearchesBusiness
                 continue;
             }
 
+            if ($field === 'logo' && ! $this->applyResearchLogo($value)) {
+                continue;
+            }
+
             match ($field) {
                 'nombre' => $this->applyResearchName($value),
                 'rubro' => data_set($this->data, 'contenido_extra.tagline', Str::limit($value, 255, '')),
@@ -228,6 +238,41 @@ trait ResearchesBusiness
         $this->researchError = null;
         $this->researchManual = [];
         $this->researchManualErrors = [];
+    }
+
+    private function applyResearchLogo(string $url): bool
+    {
+        try {
+            $path = app(BusinessLogoImporter::class)->import($url);
+        } catch (BusinessResearchException $exception) {
+            Notification::make()->warning()->title('No se pudo cargar el logo')->body($exception->getMessage().' Súbelo manualmente en la pestaña Logo.')->send();
+
+            return false;
+        }
+
+        $state = [(string) Str::uuid() => $path];
+        data_set($this->data, 'logo_path', $state);
+        if (! ($this->data['paleta_personalizada'] ?? false)) {
+            foreach ($this->logoPalette($path) as $field => $color) {
+                data_set($this->data, $field, $color);
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function logoPalette(string $path): array
+    {
+        try {
+            $contents = Storage::disk((string) config('clicktap.media_disk', 'public'))->get($path);
+        } catch (Throwable) {
+            return [];
+        }
+
+        return is_string($contents) ? (LogoPalette::fromContents($contents) ?? []) : [];
     }
 
     private function applyResearchName(string $name): void
@@ -295,6 +340,7 @@ trait ResearchesBusiness
             'telefono' => 'telefono_publico',
             'horario' => 'contenido_extra.schedule',
             'descripcion' => 'descripcion',
+            'logo' => 'logo_path',
             default => $field,
         };
 

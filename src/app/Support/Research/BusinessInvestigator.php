@@ -124,7 +124,7 @@ class BusinessInvestigator
         $result = $this->website->research($candidate['website'], (string) $candidate['name']);
         $added = 0;
         foreach ($result['campos'] as $field => $data) {
-            if (in_array($field, ['logo', 'nombre', 'direccion'], true) || isset($job['campos'][$field])) {
+            if (in_array($field, ['nombre', 'direccion'], true) || isset($job['campos'][$field])) {
                 continue;
             }
             $job['campos'][$field] = $data;

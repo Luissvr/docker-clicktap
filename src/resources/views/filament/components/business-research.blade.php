@@ -115,6 +115,9 @@
                                     @endif
                                 </span>
                                 <span class="ct-research-value">{{ $data['valor'] }}</span>
+                                @if ($field === 'logo' && str_starts_with($data['valor'], 'https://'))
+                                    <img class="ct-research-logo" src="{{ $data['valor'] }}" alt="Vista previa del logo encontrado" referrerpolicy="no-referrer" loading="lazy">
+                                @endif
                                 <span class="ct-research-origin">{{ match ($data['origen']) {
                                     'google' => 'De la ficha de Google',
                                     'pagina' => 'Leído de la web del negocio',

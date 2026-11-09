@@ -29,7 +29,7 @@ class SafeHttpFetcher
     /**
      * @return array{url: string, status: int, content_type: string, body: string}
      */
-    public function get(string $url): array
+    public function get(string $url, string $accept = 'text/html,application/xhtml+xml'): array
     {
         $current = trim($url);
 
@@ -53,7 +53,7 @@ class SafeHttpFetcher
                     },
                 ])
                     ->withUserAgent('ClickTapResearch/1.0')
-                    ->accept('text/html,application/xhtml+xml')
+                    ->accept($accept)
                     ->connectTimeout(5)
                     ->timeout(10)
                     ->get($current);

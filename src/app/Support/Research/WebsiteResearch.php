@@ -73,7 +73,7 @@ class WebsiteResearch
     }
 
     /**
-     * @param  array{url: string, title: ?string, description: ?string, image: ?string, social: array<string, string>, whatsapp: list<string>, phones: list<string>, json_ld: list<array<string, mixed>>}  $page
+     * @param  array{url: string, title: ?string, description: ?string, image: ?string, logo?: ?string, social: array<string, string>, whatsapp: list<string>, phones: list<string>, json_ld: list<array<string, mixed>>}  $page
      * @return array<string, array{valor: string, verificado: bool, origen: string, fuente: string}>
      */
     private function deterministicFields(array $page): array
@@ -99,7 +99,7 @@ class WebsiteResearch
             $add($network, $url, true);
         }
         $add('descripcion', $page['description'], false);
-        $add('logo', $page['image'], false);
+        $add('logo', $page['logo'] ?? $page['image'], false);
 
         return $fields;
     }

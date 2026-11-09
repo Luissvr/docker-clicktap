@@ -11,6 +11,7 @@ use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Http\Client\Factory as HttpFactory;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Features\SupportLockedProperties\CannotUpdateLockedPropertyException;
 use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
@@ -25,7 +26,7 @@ class BusinessResearchPanelTest extends TestCase
         parent::setUp();
         config(['services.openrouter.key' => null, 'services.brave.key' => null]);
         $this->app->instance(SafeHttpFetcher::class, new SafeHttpFetcher(fn (string $host): array => match ($host) {
-            'negocio.example' => ['93.184.216.34'],
+            'negocio.example', 'cdn.negocio.example' => ['93.184.216.34'],
             default => [],
         }));
         Http::fake([
@@ -39,7 +40,8 @@ class BusinessResearchPanelTest extends TestCase
                     'place_id' => 'ChIJOtraSucursal1234567890', 'phone' => '+56412345678',
                 ],
             ])),
-            '*negocio.example*' => Http::response('<html><body><a href="https://www.instagram.com/barberiasiete/">IG</a><a href="https://wa.me/56987654321">WA</a></body></html>', 200, ['Content-Type' => 'text/html']),
+            'cdn.negocio.example/*' => Http::response(base64_decode('iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAAFklEQVR4nGP8z8Dwn4EIwESMolGFpAAAI4QBD3ruWWEAAAAASUVORK5CYII='), 200, ['Content-Type' => 'image/png']),
+            '*negocio.example*' => Http::response('<html><head><link rel="apple-touch-icon" sizes="180x180" href="https://cdn.negocio.example/logo.png"></head><body><a href="https://www.instagram.com/barberiasiete/">IG</a><a href="https://wa.me/56987654321">WA</a></body></html>', 200, ['Content-Type' => 'text/html']),
         ]);
     }
 
@@ -222,6 +224,61 @@ class BusinessResearchPanelTest extends TestCase
             app(BusinessResearchQueue::class)->find($component->get('researchJobId'))['campos'],
             fn (array $field): bool => $field['origen'] === 'manual',
         ));
+    }
+
+    public function test_the_logo_found_on_the_website_is_downloaded_and_loaded_into_the_form(): void
+    {
+        Storage::fake('public');
+        config(['clicktap.media_disk' => 'public']);
+        $this->actAsAdministrator();
+
+        $component = Livewire::test(CreatePagina::class)
+            ->set('researchName', 'Barbería 7E')
+            ->call('startResearch');
+        $this->runWorker();
+        $component->call('chooseResearchCandidate', 0);
+        $this->runWorker();
+        $component->call('refreshResearch')
+            ->assertSee('Logo del local')
+            ->assertSet('researchSelected.logo', false)
+            ->set('researchSelected.logo', true)
+            ->call('applyResearch');
+
+        $state = $component->get('data.logo_path');
+        $this->assertIsArray($state);
+        $path = reset($state);
+        $this->assertStringStartsWith('logos/', $path);
+        Storage::disk('public')->assertExists($path);
+    }
+
+    public function test_a_logo_that_is_not_an_image_is_reported_without_breaking_the_rest(): void
+    {
+        Storage::fake('public');
+        config(['clicktap.media_disk' => 'public']);
+        $this->actAsAdministrator();
+        Http::preventStrayRequests();
+        Http::swap(new HttpFactory);
+        Http::fake([
+            'maps.google.com/*' => Http::response(BusinessResearchQueueTest::embed([[
+                'name' => 'Barbería 7E', 'address' => 'Barros Arana 123, Concepción, Bío Bío',
+                'place_id' => 'ChIJ3V-xSmq1aZYRFcjRjq-3D_o', 'website' => 'https://negocio.example/', 'phone' => '+56412238749',
+            ]])),
+            'cdn.negocio.example/*' => Http::response('<html>no soy una imagen</html>', 200, ['Content-Type' => 'text/html']),
+            '*negocio.example*' => Http::response('<html><head><link rel="apple-touch-icon" href="https://cdn.negocio.example/logo.png"></head><body></body></html>', 200, ['Content-Type' => 'text/html']),
+        ]);
+
+        $component = Livewire::test(CreatePagina::class)
+            ->set('researchName', 'Barbería 7E')
+            ->call('startResearch');
+        $this->runWorker();
+        $component->call('chooseResearchCandidate', 0);
+        $this->runWorker();
+        $component->call('refreshResearch')
+            ->set('researchSelected.logo', true)
+            ->call('applyResearch')
+            ->assertSet('data.telefono_publico', '+56412238749')
+            ->assertSet('data.logo_path', fn ($value): bool => blank($value));
+        $this->assertSame([], Storage::disk('public')->allFiles());
     }
 
     public function test_existing_values_are_kept_unless_the_user_selects_them(): void
