@@ -337,3 +337,13 @@ Para redes sociales **no** se hace scraping autenticado; como mucho se lee `og:t
 - Evaluación de 20 negocios documentada con resultados y costo real por investigación.
 - Sin datos sensibles ni claves en resultados, logs o notas.
 - Notas actualizadas: `docs/` y `SecondBrain/Proyectos/Docker ClickTap/`.
+
+## Actualización 2026-11-09 (tarde)
+
+Se añadieron tres cosas al flujo descrito en §0:
+
+1. **Horario compacto** («Lunes-Sábado 8am - 7pm») con `OpeningHoursFormatter`.
+2. **Campo para pegar el enlace** de Instagram/Facebook/TikTok cuando no se encuentran solos: validado como perfil real (rechaza publicaciones, reels y otras redes), guardado como Verificado con origen «Ingresado por ti» (`BusinessResearchQueue::setManualProfile`, `SocialProfileSearch::profileUrl`).
+3. **Logo del local**: candidato leído de la web (JSON-LD `logo` → `apple-touch-icon` → `og:image`), mostrado como Sugerido con miniatura y, al aplicar, descargado con `SafeHttpFetcher` por `BusinessLogoImporter` (solo JPG/PNG/WEBP/GIF ≥ 32 px), guardado en `logos/` y cargado en el campo Logo, recalculando la paleta salvo que esté fijada. Sin web no hay logo automático.
+
+Opciones abiertas para ampliar cobertura: Serper.dev o SerpApi como segunda fuente de redes tras Brave, y Google Places o una lista secundaria con Brave para listar negocios homónimos (D2).
