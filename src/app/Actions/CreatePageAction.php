@@ -122,6 +122,11 @@ class CreatePageAction
             'enlaces.*.nombre' => ['nullable', 'string', 'max:255'],
             'enlaces.*.etiqueta' => ['nullable', 'string', 'max:255'],
             'enlaces.*.url' => ['nullable', 'url:http,https', 'max:2048'],
+            'enlaces.*.archivo_path' => ['nullable', 'string', 'max:2048', function (string $attribute, mixed $value, \Closure $fail): void {
+                if ($value !== null && ! \App\Support\MenuFile::isValidPath($value)) {
+                    $fail('El archivo del menú no es válido.');
+                }
+            }],
             'enlaces.*.posicion' => ['required', 'integer', 'min:0', 'distinct'],
             'enlaces.*.activo' => ['required', 'boolean'],
             'enlaces.*.copiar_texto' => ['required', 'boolean'],

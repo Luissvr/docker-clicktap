@@ -7,6 +7,7 @@ use App\Models\Pagina;
 use App\Support\LinkTypeHelper;
 use App\Support\LogoCache;
 use App\Support\LogoPalette;
+use App\Support\MenuFile;
 use App\Support\PageAppearance;
 use App\Support\PageDescription;
 use App\Support\PageTrash;
@@ -399,6 +400,14 @@ class PaginaResource extends Resource
                                                     $set('copiar_texto', false);
                                                 }
 
+                                                if ($state === 'menu') {
+                                                    $set('copiar_texto', false);
+                                                    $set('url', null);
+                                                    if (blank($get('etiqueta'))) {
+                                                        $set('etiqueta', 'Ver menú');
+                                                    }
+                                                }
+
                                                 if ($state === 'transferencia') {
                                                     $set('copiar_texto', true);
                                                     $set('url', null);
@@ -433,6 +442,7 @@ class PaginaResource extends Resource
                                                 'whatsapp' => 'Ej. Escríbenos por WhatsApp',
                                                 'review' => 'Ej. Déjanos una reseña',
                                                 'location' => 'Ej. Cómo llegar',
+                                                'menu' => 'Ej. Ver nuestro menú',
                                                 'transferencia' => 'Ej. Copiar datos de transferencia',
                                                 default => 'Ej. Visita nuestra página',
                                             })
@@ -482,12 +492,35 @@ class PaginaResource extends Resource
                                             })
                                             ->dehydrateStateUsing(fn (?string $state, Forms\Get $get): ?string => match ($get('tipo')) {
                                                 'review' => LinkTypeHelper::reviewUrlFromPlaceId($get('place_id')),
-                                                'transferencia' => null,
+                                                'transferencia', 'menu' => null,
                                                 default => $state,
                                             })
                                             ->dehydratedWhenHidden()
-                                            ->visible(fn (Forms\Get $get): bool => ! in_array($get('tipo'), ['review', 'transferencia'], true))
+                                            ->visible(fn (Forms\Get $get): bool => ! in_array($get('tipo'), ['review', 'transferencia', 'menu'], true))
                                             ->columnSpan(['default' => 1, 'md' => 1]),
+                                        Forms\Components\FileUpload::make('archivo_path')
+                                            ->label('Foto o PDF del menú')
+                                            ->helperText('JPG, PNG o PDF (hasta 10 MB). Las fotos se reducen automáticamente de peso. Al pulsar el botón, el menú se abre en una pestaña nueva.')
+                                            ->acceptedFileTypes(['image/jpeg', 'image/png', 'application/pdf'])
+                                            ->maxSize(MenuFile::MAX_UPLOAD_KB)
+                                            ->fetchFileInformation(false)
+                                            ->disk(fn (): string => MenuFile::disk())
+                                            ->directory(MenuFile::DIRECTORY)
+                                            ->saveUploadedFileUsing(static function (Forms\Components\BaseFileUpload $component, \Livewire\Features\SupportFileUploads\TemporaryUploadedFile $file): ?string {
+                                                try {
+                                                    return MenuFile::store($file, $component->getDiskName());
+                                                } catch (\RuntimeException $exception) {
+                                                    \Filament\Notifications\Notification::make()->danger()->title('No se pudo subir el menú')->body($exception->getMessage())->send();
+
+                                                    return null;
+                                                }
+                                            })
+                                            ->dehydrateStateUsing(fn (mixed $state): ?string => is_array($state) ? (array_values($state)[0] ?? null) : ($state ?: null))
+                                            ->dehydratedWhenHidden()
+                                            ->required(fn (Forms\Get $get): bool => $get('tipo') === 'menu' && (bool) $get('activo'))
+                                            ->live()
+                                            ->visible(fn (Forms\Get $get): bool => $get('tipo') === 'menu')
+                                            ->columnSpanFull(),
                                         Forms\Components\Toggle::make('copiar_texto')
                                             ->label('Copiar texto al pulsar')
                                             ->live()
@@ -497,7 +530,7 @@ class PaginaResource extends Resource
                                                 default => (bool) $state,
                                             })
                                             ->dehydratedWhenHidden()
-                                            ->visible(fn (Forms\Get $get): bool => ! in_array($get('tipo'), ['review', 'transferencia'], true)),
+                                            ->visible(fn (Forms\Get $get): bool => ! in_array($get('tipo'), ['review', 'transferencia', 'menu'], true)),
                                         Forms\Components\Toggle::make('activo')
                                             ->label('Activo')
                                             ->default(true),

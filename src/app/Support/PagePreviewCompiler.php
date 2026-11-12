@@ -47,6 +47,11 @@ final class PagePreviewCompiler
                     $item['copiar_texto'] = false;
                 }
 
+                if (($item['tipo'] ?? null) === 'menu') {
+                    $item['copiar_texto'] = false;
+                    $item['url'] = self::menuPreviewUrl($item['archivo_path'] ?? null);
+                }
+
                 if (($item['tipo'] ?? null) === 'transferencia') {
                     $item['transfer_logo'] = TransferBank::publicLogo($item['banco_transferencia'] ?? $extra['transfer_logo'] ?? 'none') ?? $bankLogo;
                 }
@@ -114,6 +119,26 @@ final class PagePreviewCompiler
         }
 
         return null;
+    }
+
+    private static function menuPreviewUrl(mixed $state): ?string
+    {
+        if (is_array($state)) {
+            $state = reset($state);
+        }
+        if (! is_string($state) || ! MenuFile::isValidPath($state)) {
+            return null;
+        }
+        $disk = MenuFile::disk();
+        if ($disk === 'public') {
+            return '/storage/'.$state;
+        }
+
+        try {
+            return Storage::disk($disk)->temporaryUrl($state, now()->addMinutes(15));
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     private static function formatStorageUrl(string $path, ?Pagina $record = null): ?string

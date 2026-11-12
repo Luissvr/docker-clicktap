@@ -4,6 +4,7 @@ namespace App\Data;
 
 use App\Models\EnlacePagina;
 use App\Models\Pagina;
+use App\Support\MenuFile;
 use App\Support\PageAppearance;
 use App\Support\TransferBank;
 
@@ -59,7 +60,7 @@ final readonly class PaginaPublica
 
         $links = $pagina->enlaces
             ->where('activo', true)
-            ->map(fn (EnlacePagina $enlace): array => self::link($enlace, $fallbackTransferLogo))
+            ->map(fn (EnlacePagina $enlace): array => self::link($enlace, $fallbackTransferLogo, (string) $pagina->slug))
             ->values()
             ->all();
 
@@ -103,10 +104,14 @@ final readonly class PaginaPublica
     }
 
     /** @return array<string, mixed> */
-    private static function link(EnlacePagina $enlace, ?string $fallbackTransferLogo = null): array
+    private static function link(EnlacePagina $enlace, ?string $fallbackTransferLogo = null, string $slug = ''): array
     {
         $type = (string) $enlace->tipo;
-        $url = $type === 'transferencia' ? '' : trim((string) $enlace->url);
+        $url = match ($type) {
+            'transferencia' => '',
+            'menu' => (string) MenuFile::publicPath($slug, $enlace->archivo_path),
+            default => trim((string) $enlace->url),
+        };
         $copyText = ($type === 'transferencia' || ($type !== 'review' && $enlace->copiar_texto)) ? trim((string) $enlace->texto_copia) : '';
 
         return [
@@ -114,6 +119,7 @@ final readonly class PaginaPublica
             'name' => trim((string) $enlace->nombre) ?: null,
             'icon' => match ($type) {
                 'whatsapp', 'instagram', 'tiktok', 'facebook', 'review', 'location' => $type,
+                'menu' => 'book',
                 default => 'contact',
             },
             'label' => trim((string) ($enlace->etiqueta ?: $enlace->nombre)) ?: self::defaultLabel($type),
@@ -122,6 +128,8 @@ final readonly class PaginaPublica
             'logo' => $type === 'transferencia'
                 ? (TransferBank::publicLogo($enlace->banco_transferencia) ?? $fallbackTransferLogo)
                 : null,
+            'fileKind' => $type === 'menu' ? MenuFile::kind($enlace->archivo_path) : null,
+            'opensInNewTab' => $type === 'menu' ? true : null,
             'isDisabled' => $type !== 'transferencia' && $url === '' && $copyText === '',
         ];
     }
@@ -136,6 +144,7 @@ final readonly class PaginaPublica
             'review' => 'Escribir una reseña',
             'location' => 'Cómo llegar',
             'transferencia' => 'Copiar datos de transferencia',
+            'menu' => 'Ver menú',
             'web' => 'Sitio web',
             default => 'Enlace',
         };

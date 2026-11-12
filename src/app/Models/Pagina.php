@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Support\BusinessLedger;
+use App\Support\MenuFile;
 use App\Support\PageRoute;
 use App\Support\TracksCatalogChanges;
 use App\Support\UsesCatalogConnection;
@@ -57,6 +58,11 @@ class Pagina extends Model
             $pagina->logo_disk ??= config('clicktap.media_disk', 'public');
             $pagina->slug = PageRoute::clean($pagina->slug);
             PageRoute::assertAvailable($pagina->slug);
+        });
+
+        static::deleting(function (Pagina $pagina): void {
+            $pagina->enlaces()->where('tipo', 'menu')->get()
+                ->each(fn (EnlacePagina $enlace) => MenuFile::delete($enlace->archivo_path));
         });
 
         static::updating(function (Pagina $pagina): void {

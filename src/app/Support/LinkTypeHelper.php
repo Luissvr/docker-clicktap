@@ -18,6 +18,7 @@ final class LinkTypeHelper
             'review' => 'Reseñas (Google)',
             'location' => 'Ubicación / Mapa',
             'transferencia' => 'Datos de transferencia',
+            'menu' => 'Menú (foto o PDF)',
             'otro' => 'Otro enlace',
         ];
     }
@@ -38,6 +39,7 @@ final class LinkTypeHelper
             'review' => 'heroicon-s-star',
             'location' => 'heroicon-o-map-pin',
             'transferencia' => 'heroicon-o-building-library',
+            'menu' => 'heroicon-o-book-open',
             default => 'heroicon-o-link',
         };
     }
@@ -53,6 +55,7 @@ final class LinkTypeHelper
             'review' => '#EAB308',
             'location' => '#EF4444',
             'transferencia' => '#0D9488',
+            'menu' => '#D97706',
             default => '#6B7280',
         };
     }
@@ -94,6 +97,7 @@ final class LinkTypeHelper
             'web' => '<rect x="1" y="1" width="30" height="30" rx="8" fill="#2563EB"/><g stroke="#fff" stroke-width="1.7" stroke-linecap="round"><circle cx="16" cy="16" r="9"/><ellipse cx="16" cy="16" rx="4" ry="9"/><path d="M7 16h18M9 11h14M9 21h14"/></g>',
             'location' => '<rect x="1" y="1" width="30" height="30" rx="8" fill="#DC2626"/><path d="M16 26s8-7.5 8-13a8 8 0 0 0-16 0c0 5.5 8 13 8 13Z" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/><circle cx="16" cy="13" r="2.8" stroke="#fff" stroke-width="1.8"/>',
             'transferencia' => '<rect x="1" y="1" width="30" height="30" rx="8" fill="#0F766E"/><g stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m6 12 10-6 10 6H6ZM7 26h18M9 15v7m7-7v7m7-7v7"/><circle cx="16" cy="10" r=".7" fill="#fff" stroke="none"/></g>',
+            'menu' => '<rect x="1" y="1" width="30" height="30" rx="8" fill="#D97706"/><g stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 10v14M16 10c-2-2-5-2.5-8-2v14c3-.5 6 0 8 2 2-2 5-2.5 8-2V8c-3-.5-6 0-8 2Z"/></g>',
             default => '<rect x="1" y="1" width="30" height="30" rx="8" fill="#475569"/><g stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="m13 19 6-6M13 12l3-3a5 5 0 0 1 7 7l-3 3M19 20l-3 3a5 5 0 0 1-7-7l3-3"/></g>',
         };
 

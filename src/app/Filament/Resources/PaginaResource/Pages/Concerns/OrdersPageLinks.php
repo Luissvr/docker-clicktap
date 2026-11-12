@@ -45,6 +45,7 @@ trait OrdersPageLinks
             },
             'banco_transferencia' => $type === 'transferencia' ? 'bancoestado' : 'none',
             'place_id' => $type === 'review' ? ($this->data['contenido_extra']['place_id'] ?? null) : null,
+            'archivo_path' => null,
             'url' => $type === 'review' ? LinkTypeHelper::reviewUrlFromPlaceId($this->data['contenido_extra']['place_id'] ?? null) : null,
             'copiar_texto' => $type === 'transferencia',
             'activo' => true,

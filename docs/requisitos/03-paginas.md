@@ -1,5 +1,5 @@
 # 03 — Páginas (editor, estado comercial y papelera)
-Última revisión: 2026-11-09 · Estado: ✅
+Última revisión: 2026-11-12 · Estado: ✅
 
 ## Objetivo
 Crear y mantener la tarjeta digital pública de cada negocio: contenido, enlaces, apariencia, vista previa, estado comercial y ciclo de vida (borrador, papelera).
@@ -68,6 +68,9 @@ Administrador.
 | PAG-63 | Guardar un respaldo (contenido y logo) antes del borrado definitivo y permitir descargarlo. | ✅ | PageTrashTest: backup_contains_content_and_logo_before_permanent_deletion |
 | PAG-64 | Podar la papelera vieja a diario (03:15) solo cuando el acceso público ya fue retirado. | ✅ | PageTrashTest: old_trash_is_pruned_only_after_public_access_is_removed |
 | PAG-65 | Mover un borrador a la papelera desde el editor cancelando su publicación encolada; no ofrecer el borrado una vez enviado. | ✅ | EditPaginaDraftDeletionTest: editor_moves_an_unpublished_draft_to_trash_and_cancels_its_queued_publication, editor_does_not_offer_draft_deletion_after_a_page_was_sent, running_publication_is_withdrawn_if_its_draft_is_removed |
+| PAG-66 | Enlace tipo «Menú»: subir una foto (JPG/PNG) o un PDF (hasta 10 MB), uno por enlace; se publica dentro del sitio y se abre en pestaña nueva. | 🟡 | MenuLinkTest: public_contract_points_to_the_site_file_and_opens_in_a_new_tab, menu_without_file_is_disabled_and_other_types_never_keep_a_file |
+| PAG-67 | Reducir al máximo el peso de la foto del menú al subirla (JPEG progresivo, máx. 1800 px, objetivo ~350 KB, orientación EXIF corregida) y rechazar archivos que no sean JPG/PNG/PDF. | ✅ | MenuLinkTest: images_are_shrunk_to_a_light_progressive_jpeg, pdf_is_kept_and_other_files_are_rejected, pdf_over_ten_megabytes_is_rejected, store_writes_the_optimized_file_to_the_media_disk |
+| PAG-68 | Publicar el archivo del menú en `public/generated/menus/<slug>/` del repositorio público y borrar los archivos de menú que ya no se usan o al retirar la página; eliminar el archivo al reemplazar/borrar el enlace. | 🟡 | MenuLinkTest: publication_sends_the_menu_file_and_removes_stale_ones, replacing_or_deleting_a_link_removes_its_old_file |
 
 ## Reglas de negocio
 - La ruta (`slug`) es permanente: las tarjetas NFC/QR ya entregadas dependen de ella.

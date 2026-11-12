@@ -74,7 +74,9 @@ final class PublicPagePublisher
                 : $this->mergePageIntoContract($existing, $pagina);
             $logos = $withdraw ? [] : $this->pageLogo($pagina);
             $manualRoutes = $withdraw ? $this->manualRoutes($client, $baseUrl, $head, $pagina) : [];
-            if ($withdraw && count($payload['pages']) === count($existing['pages']) && $manualRoutes === []) {
+            $menuFiles = $withdraw ? [] : $this->menuFiles($pagina);
+            $staleMenus = $this->staleMenuFiles($client, $baseUrl, $head, $pagina, array_column($menuFiles, 'path'));
+            if ($withdraw && count($payload['pages']) === count($existing['pages']) && $manualRoutes === [] && $staleMenus === []) {
                 $pagina->forceFill(['publicacion_estado' => 'retirada_enviada', 'publicacion_commit' => $head, 'publicacion_error' => null])->save();
                 $progress?->__invoke('repository_sent', 'La página ya no figura en el repositorio');
 
@@ -95,6 +97,17 @@ final class PublicPagePublisher
                     'type' => 'blob',
                     'sha' => $this->blob($client, $baseUrl, $logo['contents']),
                 ];
+            }
+            foreach ($menuFiles as $menuFile) {
+                $entries[] = [
+                    'path' => $menuFile['path'],
+                    'mode' => '100644',
+                    'type' => 'blob',
+                    'sha' => $this->blob($client, $baseUrl, $menuFile['contents']),
+                ];
+            }
+            foreach ($staleMenus as $stale) {
+                $entries[] = ['path' => $stale, 'mode' => '100644', 'type' => 'blob', 'sha' => null];
             }
             foreach ($manualRoutes as $route) {
                 $entries[] = [
@@ -269,6 +282,52 @@ final class PublicPagePublisher
             'path' => 'public/generated/logos/'.$pagina->slug.'.'.$extension,
             'contents' => $contents,
         ]];
+    }
+
+    /** @return list<array{path: string, contents: string}> */
+    private function menuFiles(Pagina $pagina): array
+    {
+        $files = [];
+        $disk = Storage::disk(MenuFile::disk());
+        foreach ($pagina->enlaces->where('activo', true)->where('tipo', 'menu') as $enlace) {
+            $source = $enlace->archivo_path;
+            if (! MenuFile::isValidPath($source)) {
+                continue;
+            }
+            $contents = $disk->exists($source) ? $disk->get($source) : false;
+            if (! is_string($contents)) {
+                throw new RuntimeException("No se encontró el archivo del menú: {$source}. Súbelo de nuevo antes de publicar.");
+            }
+            $files[] = [
+                'path' => 'public/generated/menus/'.$pagina->slug.'/'.basename($source),
+                'contents' => $contents,
+            ];
+        }
+
+        return $files;
+    }
+
+    /**
+     * Archivos de menú que quedaron en el repositorio y ya no se usan.
+     *
+     * @param  list<string>  $keep
+     * @return list<string>
+     */
+    private function staleMenuFiles(PendingRequest $client, string $baseUrl, string $head, Pagina $pagina, array $keep): array
+    {
+        $directory = 'public/generated/menus/'.$pagina->slug;
+        $response = $client->get($baseUrl.'/contents/'.$directory, ['ref' => $head]);
+        if ($response->status() === 404) {
+            return [];
+        }
+        $response->throw();
+
+        return collect($response->json() ?? [])
+            ->filter(fn ($item): bool => is_array($item) && ($item['type'] ?? null) === 'file' && is_string($item['path'] ?? null))
+            ->pluck('path')
+            ->reject(fn (string $path): bool => in_array($path, $keep, true))
+            ->values()
+            ->all();
     }
 
     private function client(string $token): PendingRequest
